@@ -1,0 +1,6 @@
+@BeautyStore_HostAddress = http://localhost:5090
+
+GET {{BeautyStore_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
