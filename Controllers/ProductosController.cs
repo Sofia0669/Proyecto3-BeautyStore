@@ -1,5 +1,6 @@
 ﻿using BeautyStore.Data;
 using BeautyStore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,7 @@ namespace BeautyStore.Controllers
         {
             _context = context;
         }
-
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Producto>>> GetProductos()
         {
@@ -23,7 +24,7 @@ namespace BeautyStore.Controllers
                 .Include(p => p.Categoria)
                 .ToListAsync();
         }
-
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Producto>> GetProducto(int id)
         {
@@ -38,7 +39,7 @@ namespace BeautyStore.Controllers
 
             return producto;
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Producto>> PostProducto(Producto producto)
         {
@@ -50,7 +51,7 @@ namespace BeautyStore.Controllers
                 new { id = producto.IdProducto },
                 producto);
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProducto(int id, Producto producto)
         {
@@ -65,7 +66,7 @@ namespace BeautyStore.Controllers
 
             return NoContent();
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProducto(int id)
         {

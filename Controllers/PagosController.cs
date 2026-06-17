@@ -1,10 +1,12 @@
 ﻿using BeautyStore.Data;
 using BeautyStore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BeautyStore.Controllers
 {
+  
     [Route("api/[controller]")]
     [ApiController]
     public class PagosController : ControllerBase
@@ -15,13 +17,13 @@ namespace BeautyStore.Controllers
         {
             _context = context;
         }
-
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Pago>>> GetPagos()
         {
             return await _context.Pagos.ToListAsync();
         }
-
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Pago>> GetPago(int id)
         {
@@ -34,7 +36,7 @@ namespace BeautyStore.Controllers
 
             return pago;
         }
-
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Pago>> PostPago(Pago pago)
         {
@@ -46,7 +48,7 @@ namespace BeautyStore.Controllers
                 new { id = pago.IdPago },
                 pago);
         }
-
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPago(int id, Pago pago)
         {
@@ -73,7 +75,7 @@ namespace BeautyStore.Controllers
 
             return NoContent();
         }
-
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePago(int id)
         {

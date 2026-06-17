@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using BeautyStore.Data;
+﻿using BeautyStore.Data;
 using BeautyStore.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BeautyStore.Controllers
 {
@@ -17,6 +18,7 @@ namespace BeautyStore.Controllers
         }
 
         // GET: api/Pedidos
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Pedido>>> GetPedidos()
         {
@@ -26,6 +28,7 @@ namespace BeautyStore.Controllers
         }
 
         // GET: api/Pedidos/5
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Pedido>> GetPedido(int id)
         {
@@ -42,6 +45,7 @@ namespace BeautyStore.Controllers
         }
 
         // POST: api/Pedidos
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Pedido>> PostPedido(Pedido pedido)
         {
@@ -55,6 +59,7 @@ namespace BeautyStore.Controllers
         }
 
         // PUT: api/Pedidos/5
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPedido(int id, Pedido pedido)
         {
@@ -83,6 +88,7 @@ namespace BeautyStore.Controllers
         }
 
         // DELETE: api/Pedidos/5
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePedido(int id)
         {

@@ -1,5 +1,6 @@
 ﻿using BeautyStore.Data;
 using BeautyStore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ namespace BeautyStore.Controllers
         }
 
         // GET: api/Categorias
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Categoria>>> GetCategorias()
         {
@@ -24,6 +26,7 @@ namespace BeautyStore.Controllers
         }
 
         // GET: api/Categorias/5
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Categoria>> GetCategoria(int id)
         {
@@ -38,6 +41,7 @@ namespace BeautyStore.Controllers
         }
 
         // POST: api/Categorias
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<Categoria>> PostCategoria(Categoria categoria)
         {
@@ -51,6 +55,7 @@ namespace BeautyStore.Controllers
         }
 
         // PUT: api/Categorias/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCategoria(int id, Categoria categoria)
         {
@@ -67,6 +72,7 @@ namespace BeautyStore.Controllers
         }
 
         // DELETE: api/Categorias/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategoria(int id)
         {
