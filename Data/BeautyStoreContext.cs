@@ -20,5 +20,7 @@ namespace BeautyStore.Data
         public DbSet<Pedido> Pedidos { get; set; }
 
         public DbSet<DetallePedido> DetallesPedido { get; set; }
+
+        public DbSet<Pago> Pagos { get; set; }
     }
 }
