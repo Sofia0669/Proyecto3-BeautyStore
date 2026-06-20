@@ -21,13 +21,13 @@ const categorias = [
   {
     nombre: 'Perfumes',
     cantidad: 21,
-    img: 'https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&q=80',
+    img: 'https://images.pexels.com/photos/373576/pexels-photo-373576.jpeg',
   },
 ]
 
 const productos = [
   {
-    img: 'https://images.unsplash.com/photo-1586495777744-4e6232bf2f10?w=500&q=80',
+    img: 'https://images.pexels.com/photos/1669888/pexels-photo-1669888.jpeg',
     categoria: 'Maquillaje',
     nombre: 'Labial Mate Terciopelo',
     descripcion: 'Larga duración, 12 horas sin retoque. Fórmula hidratante.',
@@ -43,7 +43,7 @@ const productos = [
     badge: null,
   },
   {
-    img: 'https://images.unsplash.com/photo-1631214524020-3c69f3b52c40?w=500&q=80',
+    img: 'https://images.pexels.com/photos/4243395/pexels-photo-4243395.jpeg',
     categoria: 'Maquillaje',
     nombre: 'Base Líquida Natural',
     descripcion: 'Cobertura media-alta, acabado natural. 30 tonos disponibles.',
@@ -51,9 +51,8 @@ const productos = [
     badge: 'Nuevo',
   },
 ]
-
 const serif = { fontFamily: "'Cormorant Garamond', 'Times New Roman', Georgia, serif" }
-const sans  = { fontFamily: "'Jost', 'Inter', sans-serif" }
+const sans = { fontFamily: "'Jost', 'Inter', sans-serif" }
 
 export default function Home() {
   return (
@@ -118,7 +117,7 @@ export default function Home() {
       <div className="grid grid-cols-4 border-t border-b border-[#E8D8D2] bg-[#2A1F1F]">
         {[
           { n: '200+', l: 'Productos disponibles' },
-          { n: '15+',  l: 'Marcas de confianza' },
+          { n: '15+', l: 'Marcas de confianza' },
           { n: '4.9★', l: 'Calificación promedio' },
           { n: 'Gratis', l: 'Envío en compras +₡30k' },
         ].map((s) => (

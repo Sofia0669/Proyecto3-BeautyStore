@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BeautyStore.Controllers
 {
+   // [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class ProductosController : ControllerBase
@@ -81,6 +82,16 @@ namespace BeautyStore.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+        [HttpGet("stats")]
+        public IActionResult GetStats()
+        {
+            var stats = new {
+            TotalVentas = _context.Pagos.Sum(p => p.Monto),
+            TotalProductos = _context.Productos.Count(),
+            StockBajo = _context.Productos.Count(p => p.Stock < 5)
+        };
+            return Ok(stats);
         }
     }
 }
