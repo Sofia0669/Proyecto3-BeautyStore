@@ -17,7 +17,6 @@ export default function AdminDashboard() {
     const [modoEdicion, setModoEdicion] = useState(false);
     const [itemActual, setItemActual] = useState({});
 
-    // Función de ayuda para fetches seguros
     const fetchSeguro = async (url, headers) => {
         try {
             const res = await fetch(url, { headers });
@@ -113,7 +112,6 @@ export default function AdminDashboard() {
                                 </div>
                             ))}
                         </div>
-                        {/* Contenedor explícito para el gráfico */}
                         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-[300px] w-full">
                             <h3 className="text-lg font-semibold mb-6">Tendencia de Ventas</h3>
                             <ResponsiveContainer width="100%" height="100%">
@@ -129,7 +127,6 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        {/* Tabla genérica */}
                         <table className="w-full text-left">
                             <thead><tr className="text-gray-400 uppercase text-sm"><th>Nombre / ID</th><th>Detalle</th><th>Acciones</th></tr></thead>
                             <tbody>

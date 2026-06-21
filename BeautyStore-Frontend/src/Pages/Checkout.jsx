@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
-export default function Checkout({ onPagoExitoso }) {
-    const { cart, total, className } = useCart();
+export default function Checkout() {
+    const { cart, total, clearCart } = useCart();
     const [datos, setDatos] = useState({ numeroTarjeta: '', nombre: '' });
     const [cargando, setCargando] = useState(false);
     const [mensaje, setMensaje] = useState(null);
 
+    const navigate = useNavigate();
+
     const procesarPago = async () => {
         if (cart.length === 0) return;
-        
+
         setCargando(true);
         setMensaje(null);
 
@@ -24,22 +27,35 @@ export default function Checkout({ onPagoExitoso }) {
                     monto: total,
                     numeroTarjeta: datos.numeroTarjeta,
                     carrito: cart.map(item => ({
-                        idProducto: item.id, 
+                        idProducto: item.id,
                         cantidad: item.cantidad
                     }))
                 })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            console.log("Respuesta del servidor (texto):", text);
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error("El servidor no envió un JSON válido:", text);
+                setMensaje({ texto: "Error: El servidor respondió con un formato inesperado.", tipo: 'error' });
+                return;
+            }
 
             if (response.ok) {
-                setMensaje({ texto: data.mensaje || "Pago procesado con éxito", tipo: 'success' });
+                const textoConfirmacion = `¡Pago exitoso! Tu número de pedido es: #${data.idPedido}. Redirigiendo...`;
                 clearCart();
-                setTimeout(onPagoExitoso, 2000); 
+                setTimeout(() => {
+                    navigate('/');
+                }, 5000);
             } else {
                 setMensaje({ texto: data.mensaje || "Error al procesar el pago", tipo: 'error' });
             }
         } catch (error) {
+            console.error("Error capturado:", error);
             setMensaje({ texto: "Error de conexión con el servidor.", tipo: 'error' });
         } finally {
             setCargando(false);
@@ -52,7 +68,6 @@ export default function Checkout({ onPagoExitoso }) {
 
             <div className="bg-gray-50 p-4 rounded-xl mb-6">
                 <p className="text-gray-500 text-sm">Total a pagar</p>
-                {/* Ahora usamos el total del contexto */}
                 <p className="text-3xl font-bold text-[#C9758A]">₡{total.toLocaleString()}</p>
             </div>
 

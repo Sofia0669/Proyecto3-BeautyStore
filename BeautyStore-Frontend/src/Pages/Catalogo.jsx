@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useCart } from '../context/CartContext'; // Importamos el contexto
+import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
 
 export default function Catalogo() {
@@ -8,7 +8,6 @@ export default function Catalogo() {
     const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
     const { addToCart } = useCart();
 
-    // Simulamos carga de API
     useEffect(() => {
         setProductos([
             { id: 1, nombre: 'Labial Mate', categoria: 'Maquillaje', precio: 4900, img: '...' },
@@ -24,7 +23,6 @@ export default function Catalogo() {
             <Navbar />
 
             <div className="max-w-7xl mx-auto px-8 py-12">
-                {/* Botón Hamburguesa para Categorías (solo móvil) */}
                 <button
                     onClick={() => setMenuCategoriasAbierto(!menuCategoriasAbierto)}
                     className="md:hidden mb-4 p-2 bg-[#2A1F1F] text-white rounded"
@@ -47,7 +45,6 @@ export default function Catalogo() {
                         ))}
                     </aside>
 
-                    {/* Grilla de Productos */}
                     <main className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {productosFiltrados.map(p => (
                             <div key={p.id} className="bg-white border p-4">

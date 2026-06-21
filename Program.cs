@@ -22,23 +22,26 @@ builder.Services.AddAuthentication("Bearer")
     {
         var jwtConfig = builder.Configuration.GetSection("Jwt");
 
-        options.TokenValidationParameters =
-            new TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtConfig["Issuer"],
+            ValidAudience = jwtConfig["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig["Key"]!)),
+            RoleClaimType = ClaimTypes.Role
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-
-                ValidIssuer = jwtConfig["Issuer"],
-                ValidAudience = jwtConfig["Audience"],
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            jwtConfig["Key"]!)),
-                RoleClaimType = ClaimTypes.Role 
-            };
+                Console.WriteLine($"Error de Autenticación: {context.Exception.Message}");
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Authorization

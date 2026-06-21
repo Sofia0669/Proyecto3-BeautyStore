@@ -16,7 +16,9 @@ namespace BeautyStore.Services
             {
                 new Claim(ClaimTypes.Name, usuario.Nombre),
                 new Claim(ClaimTypes.Email, usuario.Correo),
-                new Claim(ClaimTypes.Role, usuario.Rol)
+                new Claim(ClaimTypes.Role, usuario.Rol),
+                
+                new Claim(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString())
             };
 
             var key = new SymmetricSecurityKey(

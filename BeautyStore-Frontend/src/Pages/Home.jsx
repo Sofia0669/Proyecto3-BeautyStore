@@ -71,7 +71,6 @@ export default function Home() {
 
       {/* ── HERO ── */}
       <section className="grid grid-cols-2 min-h-[560px]">
-        {/* Texto */}
         <div className="flex flex-col justify-center gap-6 px-16 py-16 bg-[#FAFAF8]">
           <p className="text-xs font-medium tracking-[0.2em] text-[#C4975A] uppercase" style={sans}>
             ✦ Nueva colección · Verano 2025
@@ -97,7 +96,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Imagen hero */}
         <div className="relative overflow-hidden bg-[#F2E8E4]">
           <img
             src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=900&q=85"
@@ -113,7 +111,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── STATS ── */}
       <div className="grid grid-cols-4 border-t border-b border-[#E8D8D2] bg-[#2A1F1F]">
         {[
           { n: '200+', l: 'Productos disponibles' },

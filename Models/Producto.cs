@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BeautyStore.Models
 {
@@ -12,6 +13,7 @@ namespace BeautyStore.Models
 
         public string? Descripcion { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Precio { get; set; }
 
         public int Stock { get; set; }
