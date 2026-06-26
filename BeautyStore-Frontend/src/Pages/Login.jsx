@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import Swal from 'sweetalert2' 
 
 const serif = { fontFamily: "'Cormorant Garamond', 'Times New Roman', Georgia, serif" }
 const sans = { fontFamily: "'Jost', 'Inter', sans-serif" }
@@ -14,6 +15,7 @@ export default function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setCargando(true);
+        setError(''); 
 
         try {
             const response = await fetch('http://localhost:5090/api/Auth/login', {
@@ -28,6 +30,19 @@ export default function Login() {
 
             localStorage.setItem('token', data.token);
             localStorage.setItem('rol', data.rol);
+
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 1500,
+                timerProgressBar: true,
+            });
+
+            await Toast.fire({
+                icon: 'success',
+                title: '¡Bienvenida de nuevo!'
+            });
 
             if (data.rol === 'Admin') {
                 navigate('/admin');

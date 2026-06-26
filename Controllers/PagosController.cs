@@ -20,15 +20,26 @@ namespace BeautyStore.Controllers
         public PagosController(BeautyStoreContext context)
         {
             _context = context;
-        }
-
-        // --- CRUD BÁSICO ---
+            }
 
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Pago>>> GetPagos()
+        public async Task<ActionResult<IEnumerable<object>>> GetPagos()
         {
-            return await _context.Pagos.ToListAsync();
+            var pagos = await _context.Pagos
+                .Include(p => p.Pedido)
+                .Select(p => new
+                {
+                    idPago = p.IdPago,
+                    idPedido = p.IdPedido,
+                    idUsuario = p.Pedido != null ? p.Pedido.IdUsuario : 0,
+                    monto = p.Monto,
+                    fechaPago = p.FechaPago,
+                    estado = p.Pedido != null ? p.Pedido.Estado : "Desconocido"
+                })
+                .ToListAsync();
+
+            return Ok(pagos);
         }
 
         [Authorize]
@@ -42,8 +53,9 @@ namespace BeautyStore.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Pago>> PostPago(Pago pago)
+        public async Task<ActionResult<Pago>> PostPago([FromBody] Pago pago)
         {
+            pago.FechaPago = DateTime.Now;
             _context.Pagos.Add(pago);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetPago), new { id = pago.IdPago }, pago);
@@ -55,7 +67,21 @@ namespace BeautyStore.Controllers
         {
             if (id != pago.IdPago) return BadRequest();
 
-            _context.Entry(pago).State = EntityState.Modified;
+            var pagoExistente = await _context.Pagos
+                .Include(p => p.Pedido)
+                .FirstOrDefaultAsync(p => p.IdPago == id);
+
+            if (pagoExistente == null) return NotFound();
+
+            pagoExistente.Monto = pago.Monto;
+            pagoExistente.Estado = pago.Estado;
+            pagoExistente.MetodoPago = pago.MetodoPago;
+            pagoExistente.FechaPago = pago.FechaPago;
+
+            if (pagoExistente.Pedido != null)
+            {
+                pagoExistente.Pedido.Estado = pago.Estado;
+            }
 
             try
             {
@@ -63,13 +89,13 @@ namespace BeautyStore.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Pagos.Any(e => e.IdPago == id)) return NotFound();
-                throw;
+                return BadRequest("Error de concurrencia al actualizar.");
             }
 
             return NoContent();
         }
 
+        // 4. DELETE
         [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePago(int id)
@@ -82,34 +108,17 @@ namespace BeautyStore.Controllers
             return NoContent();
         }
 
-        // --- PASARELA DE PAGOS ---
-
         [Authorize]
         [HttpPost("procesar")]
         public async Task<IActionResult> ProcesarPago([FromBody] PagoRequest request)
         {
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userIdString == null) return Unauthorized();
-
             int userId = int.Parse(userIdString);
 
-            var hace5Segundos = DateTime.Now.AddSeconds(-5);
-            bool hayCompraReciente = await _context.Pedidos
-                .AnyAsync(p => p.IdUsuario == userId
-                            && p.FechaPedido > hace5Segundos
-                            && p.Total == request.Monto);
-
-            if (hayCompraReciente)
-            {
-                return BadRequest(new { mensaje = "Ya estamos procesando tu compra, espera un momento..." });
-            }
-
-            // Iniciamos transacción
             using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                // 1. Crear el Pedido
                 var pedido = new Pedido
                 {
                     IdUsuario = userId,
@@ -123,23 +132,19 @@ namespace BeautyStore.Controllers
                 foreach (var item in request.Carrito)
                 {
                     var producto = await _context.Productos.FindAsync(item.IdProducto);
-
                     if (producto == null || producto.Stock < item.Cantidad)
                     {
                         await transaction.RollbackAsync();
-                        return BadRequest(new { mensaje = $"Error con el producto {item.IdProducto}: Stock insuficiente o no encontrado." });
+                        return BadRequest(new { mensaje = "Stock insuficiente." });
                     }
-
                     producto.Stock -= item.Cantidad;
-
-                    var detalle = new DetallePedido
+                    _context.DetallesPedido.Add(new DetallePedido
                     {
                         IdPedido = pedido.IdPedido,
                         IdProducto = item.IdProducto,
                         Cantidad = item.Cantidad,
                         PrecioUnitario = producto.Precio
-                    };
-                    _context.DetallesPedido.Add(detalle);
+                    });
                 }
 
                 var nuevoPago = new Pago
@@ -147,38 +152,21 @@ namespace BeautyStore.Controllers
                     IdPedido = pedido.IdPedido,
                     Monto = request.Monto,
                     FechaPago = DateTime.Now,
-                    MetodoPago = "Tarjeta de Crédito"
+                    Estado = "Pagado",
+                    MetodoPago = "Tarjeta"
                 };
                 _context.Pagos.Add(nuevoPago);
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return Ok(new
-                {
-                    mensaje = "¡Compra procesada con éxito!",
-                    idPedido = pedido.IdPedido
-                });
+                return Ok(new { mensaje = "Éxito", idPedido = pedido.IdPedido });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return StatusCode(500, new { mensaje = "Error crítico al procesar la compra.", detalle = ex.Message });
+                return StatusCode(500);
             }
-        }
-    }
-
-    // --- DTOs ---
-    public class PagoRequest
-    {
-        public decimal Monto { get; set; }
-        public string NumeroTarjeta { get; set; } = string.Empty;
-        public List<DetalleCarrito> Carrito { get; set; } = new List<DetalleCarrito>();
-    }
-
-    public class DetalleCarrito
-    {
-        public int IdProducto { get; set; }
-        public int Cantidad { get; set; }
+            }
     }
 }
