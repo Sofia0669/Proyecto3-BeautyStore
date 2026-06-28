@@ -58,10 +58,10 @@ export default function CartSidebar({ isOpen, onClose }) {
                                 {/* Imagen del Producto Vinculada */}
                                 <div className="w-24 h-24 overflow-hidden bg-[#F2E8E4] flex-shrink-0 border border-[#E8D8D2]">
                                     <img
-                                        src={item.imagen || '/img/placeholder.jpg'}
+                                        src={item.imagen}
                                         alt={item.nombre}
                                         className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                        onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Beauty+Store'; }}
+                                        onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }}
                                     />
                                 </div>
 

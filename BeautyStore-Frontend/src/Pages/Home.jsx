@@ -166,7 +166,7 @@ export default function Home() {
                 src={cat.img}
                 alt={cat.nombre}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => { e.target.src = 'https://via.placeholder.com/400x300?text=Beauty+Store'; }}
+                      onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               <div className="cat-overlay absolute inset-0 bg-[#C9758A]/10" />
@@ -199,10 +199,10 @@ export default function Home() {
               <div key={p.idProducto} className="prod-card bg-white border border-[#E8D8D2] flex flex-col h-full overflow-hidden cursor-pointer">
                 <div className="relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
                   <img
-                    src={p.imagen || 'https://via.placeholder.com/400x500?text=Sin+Imagen'}
+                     src={`/img/${p.imagen}`}
                     alt={p.nombre}
                     className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    onError={(e) => { e.target.src = 'https://via.placeholder.com/400x500?text=Error+Imagen'; }}
+                            onError={(e) => { e.target.src = "/img/sin-imagen.webp"; }}
                   />
                 </div>
                 <div className="p-5 flex flex-col flex-grow">

@@ -157,7 +157,7 @@ export default function Catalogo() {
                                                     alt={p.nombre}
                                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                     onError={(e) => {
-                                                        e.target.src = "https://via.placeholder.com/400x500?text=Sin+Imagen";
+                                                        e.target.src = "/img/sin-imagen.webp";
                                                     }}
                                                 />
                                             </div>

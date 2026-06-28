@@ -41,7 +41,10 @@ namespace BeautyStore.Controllers
             return Ok(new
             {
                 token = token,
-                rol = usuario.Rol
+                rol = usuario.Rol,
+                idUsuario = usuario.IdUsuario,
+                nombre = usuario.Nombre,
+                correo = usuario.Correo
             });
         }
 

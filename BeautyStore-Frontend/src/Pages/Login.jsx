@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Swal from 'sweetalert2' 
 
+
+
 const serif = { fontFamily: "'Cormorant Garamond', 'Times New Roman', Georgia, serif" }
 const sans = { fontFamily: "'Jost', 'Inter', sans-serif" }
 
@@ -28,8 +30,13 @@ export default function Login() {
 
             const data = await response.json();
 
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('rol', data.rol);
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("rol", data.rol);
+            localStorage.setItem("idUsuario", data.idUsuario);
+            localStorage.setItem("nombre", data.nombre);
+            localStorage.setItem("correo", data.correo);
+
+            window.location.href = "/";
 
             const Toast = Swal.mixin({
                 toast: true,

@@ -57,7 +57,7 @@ export default function Checkout() {
     return (
         <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl">
 
-            <h2 className="text-2xl font-bold mb-6">Checkout</h2>
+            <h2 className="text-2xl font-bold mb-6">Procesar Pago</h2>
 
             <div className="mb-4">
                 <p className="text-gray-500">Total a pagar</p>
