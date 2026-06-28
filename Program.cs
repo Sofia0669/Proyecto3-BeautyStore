@@ -17,6 +17,9 @@ builder.Services.AddDbContext<BeautyStoreContext>(options =>
 
 builder.Services.AddScoped<TokenService>();
 
+// Servicio Paypal:
+builder.Services.AddSingleton<PayPalService>();
+
 // JWT Authentication
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

@@ -8,7 +8,7 @@ export default function Checkout() {
     const [mensaje, setMensaje] = useState(null);
     const navigate = useNavigate();
 
-    // 🔵 Crear orden en backend
+    // 1️⃣ Crear orden en backend
     const crearOrden = async () => {
         const response = await fetch('http://localhost:5090/api/paypal/create-order', {
             method: 'POST',
@@ -26,8 +26,14 @@ export default function Checkout() {
         return data.id; // orderID de PayPal
     };
 
-    // 🟢 Capturar pago
+    // 2️⃣ Capturar pago y guardar en BD
     const capturarOrden = async (data) => {
+        // Mapear el carrito al formato que espera el backend
+        const carritoFormateado = cart.map(item => ({
+            idProducto: item.id,
+            cantidad: item.cantidad
+        }));
+
         const response = await fetch('http://localhost:5090/api/paypal/capture-order', {
             method: 'POST',
             headers: {
@@ -36,7 +42,7 @@ export default function Checkout() {
             },
             body: JSON.stringify({
                 orderID: data.orderID,
-                carrito: cart
+                carrito: carritoFormateado
             })
         });
 
@@ -44,13 +50,10 @@ export default function Checkout() {
 
         if (response.ok) {
             clearCart();
-            setMensaje({ texto: `Pago exitoso. Pedido #${result.idPedido}`, tipo: 'success' });
-
-            setTimeout(() => {
-                navigate('/');
-            }, 3000);
+            setMensaje({ texto: `¡Pago exitoso! Pedido #${result.idPedido}`, tipo: 'success' });
+            setTimeout(() => navigate('/'), 3000);
         } else {
-            setMensaje({ texto: result.message || "Error en el pago", tipo: 'error' });
+            setMensaje({ texto: result.mensaje || "Error en el pago", tipo: 'error' });
         }
     };
 
@@ -66,14 +69,14 @@ export default function Checkout() {
                 </p>
             </div>
 
-            {/* 💳 BOTÓN PAYPAL */}
+            {/* Botón PayPal */}
             <PayPalButtons
                 createOrder={crearOrden}
                 onApprove={capturarOrden}
             />
 
             {mensaje && (
-                <div className={`mt-4 p-3 rounded ${mensaje.tipo === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div className={`mt-4 p-3 rounded ${mensaje.tipo === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {mensaje.texto}
                 </div>
             )}

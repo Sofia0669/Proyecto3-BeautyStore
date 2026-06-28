@@ -8,17 +8,16 @@ namespace BeautyStore.Models
     {
         [Key]
         public int IdPago { get; set; }
-
         public int IdPedido { get; set; }
-
         public string MetodoPago { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Monto { get; set; }
 
         public DateTime FechaPago { get; set; } = DateTime.Now;
-
         public string Estado { get; set; } = "Pendiente";
+
+        public string? PaypalOrderId { get; set; }  // ← AGREGAR ESTO
 
         [JsonIgnore]
         public Pedido? Pedido { get; set; }

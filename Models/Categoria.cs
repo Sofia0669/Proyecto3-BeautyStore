@@ -12,6 +12,8 @@ namespace BeautyStore.Models
 
         public string? Descripcion { get; set; }
 
+        public string? Imagen { get; set; }
+
         [JsonIgnore]
         public ICollection<Producto>? Productos { get; set; }
     }

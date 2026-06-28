@@ -2,26 +2,35 @@ import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import Swal from 'sweetalert2'; // ✦ Importamos SweetAlert2
+import Swal from 'sweetalert2';
 
 const serif = { fontFamily: "'Cormorant Garamond', 'Times New Roman', Georgia, serif" };
 const sans = { fontFamily: "'Jost', 'Inter', sans-serif" };
 
 export default function Catalogo() {
     const [productos, setProductos] = useState([]);
+    const [categorias, setCategorias] = useState([]);
     const [filtroCategoria, setFiltroCategoria] = useState(0);
     const [menuCategoriasAbierto, setMenuCategoriasAbierto] = useState(false);
     const [cargando, setCargando] = useState(true);
 
     const { addToCart } = useCart();
 
-    const categorias = [
-        { id: 0, nombre: 'Todos' },
-        { id: 1, nombre: 'Maquillaje' },
-        { id: 2, nombre: 'Cuidado Facial' },
-        { id: 3, nombre: 'Cabello' },
-        { id: 4, nombre: 'Perfumes' }
-    ];
+    // ← Cargar categorías desde la API
+    useEffect(() => {
+        const obtenerCategorias = async () => {
+            try {
+                const response = await fetch('http://localhost:5090/api/Categorias');
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategorias(data);
+                }
+            } catch (error) {
+                console.error("Error al cargar categorías:", error);
+            }
+        };
+        obtenerCategorias();
+    }, []);
 
     useEffect(() => {
         const obtenerProductos = async () => {
@@ -30,8 +39,6 @@ export default function Catalogo() {
                 if (response.ok) {
                     const data = await response.json();
                     setProductos(data);
-                } else {
-                    console.error("Error al obtener los productos del servidor");
                 }
             } catch (error) {
                 console.error("Error de conexión:", error);
@@ -39,14 +46,11 @@ export default function Catalogo() {
                 setCargando(false);
             }
         };
-
         obtenerProductos();
     }, []);
 
-    // ✦ Función manejadora de agregar con validación de login y alerta
     const manejarAgregarAlCarrito = (producto) => {
-        const token = localStorage.getItem('token'); // Lógica de sesión
-
+        const token = localStorage.getItem('token');
         if (!token) {
             Swal.fire({
                 title: '¡Atención!',
@@ -65,18 +69,13 @@ export default function Catalogo() {
             imagen: producto.imagen
         });
 
-        const Toast = Swal.mixin({
+        Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
             timer: 2000,
             timerProgressBar: true,
-        });
-
-        Toast.fire({
-            icon: 'success',
-            title: 'Producto añadido al carrito'
-        });
+        }).fire({ icon: 'success', title: 'Producto añadido al carrito' });
     };
 
     const productosFiltrados = filtroCategoria === 0
@@ -84,7 +83,7 @@ export default function Catalogo() {
         : productos.filter(p => p.idCategoria === filtroCategoria);
 
     const obtenerNombreCategoria = (idCat) => {
-        const cat = categorias.find(c => c.id === idCat);
+        const cat = categorias.find(c => c.idCategoria === idCat);
         return cat ? cat.nombre : 'Cosmético';
     };
 
@@ -95,10 +94,12 @@ export default function Catalogo() {
                 .prod-card { transition: transform 0.25s, border-color 0.25s; }
                 .btn-agregar { transition: all 0.3s ease; }
                 .btn-agregar:hover { background-color: #C9758A; color: white; border-color: #C9758A; }
+                .cat-btn:hover img { transform: scale(1.05); }
             `}</style>
 
             <Navbar />
 
+            {/* Hero */}
             <div className="bg-[#F2E8E4] py-16 text-center border-b border-[#E8D8D2]">
                 <h1 className="text-5xl font-semibold text-[#2A1F1F] m-0" style={serif}>
                     Nuestro <em className="text-[#C9758A]">Catálogo</em>
@@ -107,6 +108,60 @@ export default function Catalogo() {
                     Descubre nuestra selección exclusiva de productos diseñados para realzar tu belleza natural.
                 </p>
             </div>
+
+            {/* Categorías con imagen */}
+            {categorias.length > 0 && (
+                <div className="max-w-[1400px] mx-auto px-8 lg:px-16 pt-10 pb-2">
+                    <h2 className="text-xs tracking-[0.18em] text-[#C4975A] uppercase mb-6" style={sans}>
+                        Explorar por categoría
+                    </h2>
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                        {/* Botón "Todos" */}
+                        <button
+                            onClick={() => setFiltroCategoria(0)}
+                            className={`cat-btn flex-shrink-0 flex flex-col items-center gap-2 p-3 border transition-all ${filtroCategoria === 0
+                                    ? 'border-[#C9758A] bg-[#C9758A]/5'
+                                    : 'border-[#E8D8D2] hover:border-[#C9758A]'
+                                }`}
+                        >
+                            <div className="w-16 h-16 bg-[#F2E8E4] flex items-center justify-center overflow-hidden">
+                                <span className="text-2xl">✦</span>
+                            </div>
+                            <span className="text-xs font-medium tracking-wider text-[#2A1F1F]" style={sans}>
+                                Todos
+                            </span>
+                        </button>
+
+                        {/* Categorías de la BD */}
+                        {categorias.map(cat => (
+                            <button
+                                key={cat.idCategoria}
+                                onClick={() => setFiltroCategoria(cat.idCategoria)}
+                                className={`cat-btn flex-shrink-0 flex flex-col items-center gap-2 p-3 border transition-all ${filtroCategoria === cat.idCategoria
+                                        ? 'border-[#C9758A] bg-[#C9758A]/5'
+                                        : 'border-[#E8D8D2] hover:border-[#C9758A]'
+                                    }`}
+                            >
+                                <div className="w-16 h-16 bg-[#F2E8E4] overflow-hidden flex items-center justify-center">
+                                    {cat.imagen ? (
+                                        <img
+                                            src={`/img/${cat.imagen}`}
+                                            alt={cat.nombre}
+                                            className="w-full h-full object-cover transition-transform duration-300"
+                                            onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }}
+                                        />
+                                    ) : (
+                                        <span className="text-2xl text-[#C4975A]">✦</span>
+                                    )}
+                                </div>
+                                <span className="text-xs font-medium tracking-wider text-[#2A1F1F] max-w-[72px] text-center leading-tight" style={sans}>
+                                    {cat.nombre}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="max-w-[1400px] mx-auto px-8 lg:px-16 py-12">
                 <button
@@ -117,17 +172,26 @@ export default function Catalogo() {
                 </button>
 
                 <div className="flex flex-col md:flex-row gap-12 items-start">
-                    {/* Sidebar de Filtros */}
+                    {/* Sidebar filtros */}
                     <aside className={`${menuCategoriasAbierto ? 'block' : 'hidden'} md:block w-full md:w-56 flex-shrink-0 sticky top-8`}>
                         <h2 className="text-xs tracking-[0.18em] text-[#C4975A] uppercase mb-6" style={sans}>Filtrar por</h2>
                         <div className="space-y-1">
-                            {categorias.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setFiltroCategoria(cat.id)}
-                                    className={`block w-full text-left py-2 px-3 text-sm transition-all border-l-2 ${filtroCategoria === cat.id
+                            <button
+                                onClick={() => setFiltroCategoria(0)}
+                                className={`block w-full text-left py-2 px-3 text-sm transition-all border-l-2 ${filtroCategoria === 0
                                         ? 'border-[#C9758A] text-[#2A1F1F] font-medium bg-[#C9758A]/5'
                                         : 'border-transparent text-[#6B4E4E] font-light hover:text-[#2A1F1F] hover:bg-black/5'
+                                    }`}
+                            >
+                                Todos
+                            </button>
+                            {categorias.map(cat => (
+                                <button
+                                    key={cat.idCategoria}
+                                    onClick={() => setFiltroCategoria(cat.idCategoria)}
+                                    className={`block w-full text-left py-2 px-3 text-sm transition-all border-l-2 ${filtroCategoria === cat.idCategoria
+                                            ? 'border-[#C9758A] text-[#2A1F1F] font-medium bg-[#C9758A]/5'
+                                            : 'border-transparent text-[#6B4E4E] font-light hover:text-[#2A1F1F] hover:bg-black/5'
                                         }`}
                                 >
                                     {cat.nombre}
@@ -136,7 +200,7 @@ export default function Catalogo() {
                         </div>
                     </aside>
 
-                    {/* Grid Principal */}
+                    {/* Grid productos */}
                     <main className="flex-grow w-full">
                         {cargando ? (
                             <div className="text-center py-20 text-[#6B4E4E] font-light">Cargando catálogo...</div>
@@ -156,9 +220,7 @@ export default function Catalogo() {
                                                     src={`/img/${p.imagen}`}
                                                     alt={p.nombre}
                                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                    onError={(e) => {
-                                                        e.target.src = "/img/sin-imagen.webp";
-                                                    }}
+                                                    onError={(e) => { e.target.src = "/img/sin-imagen.webp"; }}
                                                 />
                                             </div>
                                             <div className="p-5 flex flex-col flex-grow">
@@ -181,11 +243,11 @@ export default function Catalogo() {
                                                         ₡{p.precio.toLocaleString()}
                                                     </span>
                                                     <button
-                                                        onClick={() => manejarAgregarAlCarrito(p)} // ✦ Usamos el manejador con validación
+                                                        onClick={() => manejarAgregarAlCarrito(p)}
                                                         disabled={p.stock === 0}
                                                         className={`btn-agregar px-4 py-2 border text-xs font-medium tracking-widest bg-transparent ${p.stock === 0
-                                                            ? 'border-gray-300 text-gray-300 cursor-not-allowed'
-                                                            : 'border-[#2A1F1F] text-[#2A1F1F]'
+                                                                ? 'border-gray-300 text-gray-300 cursor-not-allowed'
+                                                                : 'border-[#2A1F1F] text-[#2A1F1F]'
                                                             }`}
                                                         style={sans}
                                                     >
