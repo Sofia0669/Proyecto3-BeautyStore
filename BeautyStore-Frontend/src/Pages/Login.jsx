@@ -36,7 +36,7 @@ export default function Login() {
             localStorage.setItem("nombre", data.nombre);
             localStorage.setItem("correo", data.correo);
 
-            window.location.href = "/";
+            
 
             const Toast = Swal.mixin({
                 toast: true,
@@ -55,6 +55,7 @@ export default function Login() {
                 navigate('/admin');
             } else {
                 navigate('/catalogo');
+                window.location.href = "/";
             }
         } catch (err) {
             setError('Correo o contraseña incorrectos.');
