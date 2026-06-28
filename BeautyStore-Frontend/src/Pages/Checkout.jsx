@@ -1,102 +1,82 @@
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { PayPalButtons } from "@paypal/react-paypal-js";
 
 export default function Checkout() {
     const { cart, total, clearCart } = useCart();
-    const [datos, setDatos] = useState({ numeroTarjeta: '', nombre: '' });
-    const [cargando, setCargando] = useState(false);
     const [mensaje, setMensaje] = useState(null);
-
     const navigate = useNavigate();
 
-    const procesarPago = async () => {
-        if (cart.length === 0) return;
+    // 🔵 Crear orden en backend
+    const crearOrden = async () => {
+        const response = await fetch('http://localhost:5090/api/paypal/create-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                monto: total,
+                carrito: cart
+            })
+        });
 
-        setCargando(true);
-        setMensaje(null);
+        const data = await response.json();
+        return data.id; // orderID de PayPal
+    };
 
-        try {
-            const response = await fetch('http://localhost:5090/api/Pagos/procesar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    monto: total,
-                    numeroTarjeta: datos.numeroTarjeta,
-                    carrito: cart.map(item => ({
-                        idProducto: item.id,
-                        cantidad: item.cantidad
-                    }))
-                })
-            });
+    // 🟢 Capturar pago
+    const capturarOrden = async (data) => {
+        const response = await fetch('http://localhost:5090/api/paypal/capture-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                orderID: data.orderID,
+                carrito: cart
+            })
+        });
 
-            const text = await response.text();
-            console.log("Respuesta del servidor (texto):", text);
+        const result = await response.json();
 
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.error("El servidor no envió un JSON válido:", text);
-                setMensaje({ texto: "Error: El servidor respondió con un formato inesperado.", tipo: 'error' });
-                return;
-            }
+        if (response.ok) {
+            clearCart();
+            setMensaje({ texto: `Pago exitoso. Pedido #${result.idPedido}`, tipo: 'success' });
 
-            if (response.ok) {
-                const textoConfirmacion = `¡Pago exitoso! Tu número de pedido es: #${data.idPedido}. Redirigiendo...`;
-                clearCart();
-                setTimeout(() => {
-                    navigate('/');
-                }, 5000);
-            } else {
-                setMensaje({ texto: data.mensaje || "Error al procesar el pago", tipo: 'error' });
-            }
-        } catch (error) {
-            console.error("Error capturado:", error);
-            setMensaje({ texto: "Error de conexión con el servidor.", tipo: 'error' });
-        } finally {
-            setCargando(false);
+            setTimeout(() => {
+                navigate('/');
+            }, 3000);
+        } else {
+            setMensaje({ texto: result.message || "Error en el pago", tipo: 'error' });
         }
     };
 
     return (
-        <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-            <h2 className="text-2xl font-bold mb-6 text-slate-800">Finalizar Compra</h2>
+        <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl">
 
-            <div className="bg-gray-50 p-4 rounded-xl mb-6">
-                <p className="text-gray-500 text-sm">Total a pagar</p>
-                <p className="text-3xl font-bold text-[#C9758A]">₡{total.toLocaleString()}</p>
+            <h2 className="text-2xl font-bold mb-6">Checkout</h2>
+
+            <div className="mb-4">
+                <p className="text-gray-500">Total a pagar</p>
+                <p className="text-3xl font-bold text-green-600">
+                    ₡{total.toLocaleString()}
+                </p>
             </div>
 
-            <div className="space-y-4">
-                <input
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#C9758A] outline-none"
-                    placeholder="Nombre en la tarjeta"
-                    onChange={(e) => setDatos({ ...datos, nombre: e.target.value })}
-                />
-                <input
-                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#C9758A] outline-none"
-                    placeholder="Número de tarjeta (ej: 1234...)"
-                    onChange={(e) => setDatos({ ...datos, numeroTarjeta: e.target.value })}
-                />
-            </div>
+            {/* 💳 BOTÓN PAYPAL */}
+            <PayPalButtons
+                createOrder={crearOrden}
+                onApprove={capturarOrden}
+            />
 
             {mensaje && (
-                <div className={`mt-4 p-3 rounded-lg text-sm ${mensaje.tipo === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <div className={`mt-4 p-3 rounded ${mensaje.tipo === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
                     {mensaje.texto}
                 </div>
             )}
-
-            <button
-                onClick={procesarPago}
-                disabled={cargando || cart.length === 0}
-                className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition ${cargando ? 'bg-gray-400' : 'bg-[#2A1F1F] hover:bg-[#C9758A]'}`}
-            >
-                {cargando ? 'Procesando...' : 'Confirmar Pago'}
-            </button>
         </div>
     );
 }

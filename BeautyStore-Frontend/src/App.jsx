@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { PayPalScriptProvider } from "@paypal/react-paypal-js"
+
 import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Registro from './Pages/Registro'
@@ -19,33 +21,39 @@ const Placeholder = ({ nombre }) => (
 
 export default function App() {
     return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/registro" element={<Registro />} />
-                <Route path="/catalogo" element={<Catalogo />} />
+        <PayPalScriptProvider
+            options={{
+                clientId: "AdcW48zVwlVE0qVIzm16fUtEM5ZzhEJGKXwzC3hsQKnmt9Flk0RoLTAo4PTgvoFC9vlDGq7altz4rqWz"
+            }}
+        >
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/registro" element={<Registro />} />
+                    <Route path="/catalogo" element={<Catalogo />} />
 
-                <Route
-                    path="/checkout"
-                    element={
-                        <RutaProtegida>
-                            <Checkout />
-                        </RutaProtegida>
-                    }
-                />
+                    <Route
+                        path="/checkout"
+                        element={
+                            <RutaProtegida>
+                                <Checkout />
+                            </RutaProtegida>
+                        }
+                    />
 
-                <Route
-                    path="/admin"
-                    element={
-                        <RutaProtegida rolRequerido="Admin">
-                            <AdminPanel />
-                        </RutaProtegida>
-                    }
-                />
+                    <Route
+                        path="/admin"
+                        element={
+                            <RutaProtegida rolRequerido="Admin">
+                                <AdminPanel />
+                            </RutaProtegida>
+                        }
+                    />
 
-                <Route path="*" element={<Placeholder nombre="Página no encontrada" />} />
-            </Routes>
-        </BrowserRouter>
+                    <Route path="*" element={<Placeholder nombre="Página no encontrada" />} />
+                </Routes>
+            </BrowserRouter>
+        </PayPalScriptProvider>
     )
 }

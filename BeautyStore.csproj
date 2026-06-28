@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="beauty-store-frontend\**" />
+    <Content Remove="beauty-store-frontend\**" />
+    <EmbeddedResource Remove="beauty-store-frontend\**" />
+    <None Remove="beauty-store-frontend\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
@@ -20,11 +27,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="PayPalCheckoutSdk" Version="1.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="beauty-store-frontend\src\Pages\" />
+    <Folder Include="BeautyStore-Frontend\src\Components\" />
+    <Folder Include="BeautyStore-Frontend\src\Pages\" />
   </ItemGroup>
 
 </Project>

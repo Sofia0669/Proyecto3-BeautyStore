@@ -153,10 +153,12 @@ export default function Catalogo() {
                                         <div key={p.idProducto} className="prod-card bg-white border border-[#E8D8D2] flex flex-col h-full cursor-pointer">
                                             <div className="relative overflow-hidden group" style={{ aspectRatio: '4/5' }}>
                                                 <img
-                                                    src={p.imagen || 'https://via.placeholder.com/400x500?text=Sin+Imagen'}
+                                                    src={`/img/${p.imagen}`}
                                                     alt={p.nombre}
                                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                    onError={(e) => { e.target.src = 'https://via.placeholder.com/400x500?text=Error+Imagen'; }}
+                                                    onError={(e) => {
+                                                        e.target.src = "https://via.placeholder.com/400x500?text=Sin+Imagen";
+                                                    }}
                                                 />
                                             </div>
                                             <div className="p-5 flex flex-col flex-grow">

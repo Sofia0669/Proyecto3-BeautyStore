@@ -13,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<BeautyStoreContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Servicio JWT
+// Servicio JWTSystem.IO.InvalidDataException: 'Failed to load configuration from file 'C:\Users\Usuario\Documents\.NET\BeautyStore\appsettings.json'.'
+
 builder.Services.AddScoped<TokenService>();
 
 // JWT Authentication
@@ -76,6 +77,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BeautyStoreContext>();
     db.Database.Migrate();
+
     // Seed inicial: categorías y productos de ejemplo
     if (!db.Categorias.Any() && !db.Productos.Any())
     {
