@@ -42,7 +42,7 @@ namespace BeautyStore.Migrations
 
                     b.HasKey("IdCategoria");
 
-                    b.ToTable("Categorias");
+                    b.ToTable("Categorias", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.DetallePedido", b =>
@@ -77,7 +77,7 @@ namespace BeautyStore.Migrations
 
                     b.HasIndex("ProductoIdProducto");
 
-                    b.ToTable("DetallesPedido");
+                    b.ToTable("DetallesPedido", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.Pago", b =>
@@ -115,7 +115,7 @@ namespace BeautyStore.Migrations
 
                     b.HasIndex("PedidoIdPedido");
 
-                    b.ToTable("Pagos");
+                    b.ToTable("Pagos", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.Pedido", b =>
@@ -146,7 +146,7 @@ namespace BeautyStore.Migrations
 
                     b.HasIndex("UsuarioIdUsuario");
 
-                    b.ToTable("Pedidos");
+                    b.ToTable("Pedidos", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.Producto", b =>
@@ -183,7 +183,7 @@ namespace BeautyStore.Migrations
 
                     b.HasIndex("CategoriaIdCategoria");
 
-                    b.ToTable("Productos");
+                    b.ToTable("Productos", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.Usuario", b =>
@@ -212,7 +212,7 @@ namespace BeautyStore.Migrations
 
                     b.HasKey("IdUsuario");
 
-                    b.ToTable("Usuarios");
+                    b.ToTable("Usuarios", (string)null);
                 });
 
             modelBuilder.Entity("BeautyStore.Models.DetallePedido", b =>

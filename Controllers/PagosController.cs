@@ -20,7 +20,7 @@ namespace BeautyStore.Controllers
         public PagosController(BeautyStoreContext context)
         {
             _context = context;
-            }
+        }
 
         [Authorize]
         [HttpGet]
@@ -28,15 +28,16 @@ namespace BeautyStore.Controllers
         {
             var pagos = await _context.Pagos
                 .Include(p => p.Pedido)
-                .Select(p => new
-                {
-                    idPago = p.IdPago,
-                    idPedido = p.IdPedido,
-                    idUsuario = p.Pedido != null ? p.Pedido.IdUsuario : 0,
-                    monto = p.Monto,
-                    fechaPago = p.FechaPago,
-                    estado = p.Pedido != null ? p.Pedido.Estado : "Desconocido"
-                })
+               .Select(p => new
+               {
+                   idPago = p.IdPago,
+                   idPedido = p.IdPedido,
+                   idUsuario = p.Pedido != null ? p.Pedido.IdUsuario : 0,
+                   monto = p.Monto,
+                   metodoPago = p.MetodoPago,
+                   fechaPago = p.FechaPago,
+                   estado = p.Estado
+               })
                 .ToListAsync();
 
             return Ok(pagos);
@@ -93,6 +94,47 @@ namespace BeautyStore.Controllers
             }
 
             return NoContent();
+        }
+
+        // GET: api/Pagos/{id}/factura
+        [Authorize]
+        [HttpGet("{id}/factura")]
+        public async Task<ActionResult<object>> GetFactura(int id)
+        {
+            var pago = await _context.Pagos
+                .Include(p => p.Pedido)
+                    .ThenInclude(ped => ped.Usuario)
+                .Include(p => p.Pedido)
+                    .ThenInclude(ped => ped.Detalles)
+                        .ThenInclude(d => d.Producto)
+                .FirstOrDefaultAsync(p => p.IdPago == id);
+
+            if (pago == null) return NotFound();
+
+            return Ok(new
+            {
+                idPago = pago.IdPago,
+                idPedido = pago.IdPedido,
+                metodoPago = pago.MetodoPago,
+                monto = pago.Monto,
+                fechaPago = pago.FechaPago,
+                estado = pago.Estado,
+                cliente = pago.Pedido?.Usuario == null ? null : new
+                {
+                    idUsuario = pago.Pedido.Usuario.IdUsuario,
+                    nombre = pago.Pedido.Usuario.Nombre,
+                    correo = pago.Pedido.Usuario.Correo,
+                    rol = pago.Pedido.Usuario.Rol
+                },
+                productos = pago.Pedido?.Detalles?.Select(d => new
+                {
+                    idProducto = d.IdProducto,
+                    nombre = d.Producto != null ? d.Producto.Nombre : $"Producto #{d.IdProducto}",
+                    cantidad = d.Cantidad,
+                    precioUnitario = d.PrecioUnitario,
+                    subtotal = d.Cantidad * d.PrecioUnitario
+                }) ?? Enumerable.Empty<object>()
+            });
         }
 
         // 4. DELETE
@@ -167,6 +209,6 @@ namespace BeautyStore.Controllers
                 await transaction.RollbackAsync();
                 return StatusCode(500);
             }
-            }
+        }
     }
 }

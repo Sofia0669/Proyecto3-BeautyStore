@@ -87,15 +87,17 @@ public class PayPalController : ControllerBase
             }
 
             // Crear el Pago vinculado al Pedido Y a PayPal
-            _context.Pagos.Add(new Pago
+            var pago = new Pago
             {
                 IdPedido = pedido.IdPedido,
                 Monto = montoCapturado,
                 FechaPago = DateTime.Now,
                 Estado = "Pagado",
                 MetodoPago = "PayPal",
-                PaypalOrderId = data.OrderID   // ← vinculo con PayPal
-            });
+                PaypalOrderId = data.OrderID
+            };
+
+            _context.Pagos.Add(pago);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -103,7 +105,13 @@ public class PayPalController : ControllerBase
             return Ok(new
             {
                 mensaje = "Pago procesado correctamente.",
+                idPago = pago.IdPago,
                 idPedido = pedido.IdPedido,
+                idUsuario = userId,
+                monto = pago.Monto,
+                fechaPago = pago.FechaPago,
+                metodoPago = pago.MetodoPago,
+                estado = pago.Estado,
                 paypalOrderId = data.OrderID,
                 status = result.Status
             });

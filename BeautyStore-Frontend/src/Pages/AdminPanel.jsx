@@ -15,7 +15,6 @@ export default function AdminDashboard() {
     const [vistaActiva, setVistaActiva] = useState('dashboard');
     const [refresh, setRefresh] = useState(false);
 
-    // Estados de datos
     const [stats, setStats] = useState({ totalVentas: 0, totalProductos: 0, stockBajo: 0 });
     const [dataVentas, setDataVentas] = useState([]);
     const [productos, setProductos] = useState([]);
@@ -23,20 +22,15 @@ export default function AdminDashboard() {
     const [usuarios, setUsuarios] = useState([]);
     const [pagos, setPagos] = useState([]);
 
-    // Estados CRUD
     const [modalAbierto, setModalAbierto] = useState(false);
     const [modoEdicion, setModoEdicion] = useState(false);
     const [itemActual, setItemActual] = useState({});
     const [cargandoEnvio, setCargandoEnvio] = useState(false);
 
-    // ─── Fetch seguro ──────────────────────────────────────────────────────────
     const fetchSeguro = async (url, headers) => {
         try {
             const res = await fetch(url, { headers });
-            if (!res.ok) {
-                console.error(`Error ${res.status}: ${url}`);
-                return [];
-            }
+            if (!res.ok) { console.error(`Error ${res.status}: ${url}`); return []; }
             return await res.json();
         } catch (error) {
             console.error('Error de red:', error);
@@ -44,15 +38,11 @@ export default function AdminDashboard() {
         }
     };
 
-    // ─── Carga de datos ────────────────────────────────────────────────────────
     useEffect(() => {
         const cargarDatos = async () => {
             const token = localStorage.getItem('token');
             if (!token) return;
-            const headers = {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
+            const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
             if (vistaActiva === 'dashboard') {
                 const [prods, cats, users, pays] = await Promise.all([
@@ -61,60 +51,52 @@ export default function AdminDashboard() {
                     fetchSeguro(`${API}/Usuarios`, headers),
                     fetchSeguro(`${API}/Pagos`, headers),
                 ]);
-
                 if (prods) setProductos(prods);
                 if (cats) setCategorias(cats);
                 if (users) setUsuarios(users);
                 if (pays) {
                     setPagos(pays);
-                    // Gráfico: últimos 7 pagos agrupados por día
-                    const ventasPorDia = pays.slice(-7).map(p => ({
-                        name: new Date(p.fechaPago).toLocaleDateString('es-CR', { weekday: 'short' }),
-                        ventas: Number(p.monto || 0)
-                    }));
+                    // Agrupar ventas por fecha (últimos 7 días con actividad)
+                    const ventasPorFecha = {};
+                    pays.forEach(p => {
+                        const fecha = new Date(p.fechaPago).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' });
+                        ventasPorFecha[fecha] = (ventasPorFecha[fecha] || 0) + Number(p.monto || 0);
+                    });
+                    const ventasPorDia = Object.entries(ventasPorFecha)
+                        .slice(-7)
+                        .map(([fecha, total]) => ({ name: fecha, ventas: total }));
                     setDataVentas(ventasPorDia);
                 }
-
                 setStats({
                     totalVentas: pays?.reduce((acc, p) => acc + Number(p.monto || 0), 0) ?? 0,
                     totalProductos: prods?.length ?? 0,
-                    stockBajo: prods?.filter(p => p.stock <= 5).length ?? 0
+                    stockBajo: prods?.filter(p => p.stock <= 5).reduce((acc, p) => acc + Number(p.stock || 0), 0) ?? 0
                 });
-
             } else if (vistaActiva === 'productos') {
                 const data = await fetchSeguro(`${API}/Productos`, headers);
                 if (data) setProductos(data);
-
             } else if (vistaActiva === 'categorias') {
                 const data = await fetchSeguro(`${API}/Categorias`, headers);
                 if (data) setCategorias(data);
-
             } else if (vistaActiva === 'usuarios') {
                 const data = await fetchSeguro(`${API}/Usuarios`, headers);
                 if (data) setUsuarios(data);
-
             } else if (vistaActiva === 'pagos') {
                 const data = await fetchSeguro(`${API}/Pagos`, headers);
                 if (data) setPagos(data);
             }
         };
-
         cargarDatos();
     }, [refresh, vistaActiva]);
 
-    // ─── Abrir modal ───────────────────────────────────────────────────────────
     const abrirModal = (item = null) => {
         setModoEdicion(!!item);
         if (item) {
             const copia = { ...item };
-            // Normalizar fecha para el input type="date"
-            if (vistaActiva === 'pagos' && copia.fechaPago) {
+            if (vistaActiva === 'pagos' && copia.fechaPago)
                 copia.fechaPago = copia.fechaPago.split('T')[0];
-            }
-            // Limpiar password al editar usuario
-            if (vistaActiva === 'usuarios') {
+            if (vistaActiva === 'usuarios')
                 copia.password = '';
-            }
             setItemActual(copia);
         } else {
             setItemActual({});
@@ -122,24 +104,17 @@ export default function AdminDashboard() {
         setModalAbierto(true);
     };
 
-    // ─── Cambio de inputs ──────────────────────────────────────────────────────
     const manejarCambioInput = ({ target }) => {
         const { name, value } = target;
         setItemActual(prev => ({ ...prev, [name]: value }));
     };
 
-    // ─── Guardar (POST / PUT) ──────────────────────────────────────────────────
     const guardarItem = async (e) => {
         e.preventDefault();
         setCargandoEnvio(true);
 
         const token = localStorage.getItem('token');
-        const endpointMap = {
-            productos: 'Productos',
-            categorias: 'Categorias',
-            usuarios: 'Usuarios',
-            pagos: 'Pagos'
-        };
+        const endpointMap = { productos: 'Productos', categorias: 'Categorias', usuarios: 'Usuarios', pagos: 'Pagos' };
         const idKey =
             vistaActiva === 'productos' ? 'idProducto' :
                 vistaActiva === 'categorias' ? 'idCategoria' :
@@ -147,20 +122,30 @@ export default function AdminDashboard() {
 
         let datos = { ...itemActual };
 
+        // ✅ FIX CATEGORIAS: incluir descripcion e imagen
+        if (vistaActiva === 'categorias') {
+            datos = {
+                idCategoria: datos.idCategoria || 0,
+                nombre: datos.nombre || '',
+                descripcion: datos.descripcion || '',
+                imagen: datos.imagen || ''
+            };
+        }
+
+        // ✅ FIX PAGOS: incluir metodoPago y estado correctamente
         if (vistaActiva === 'pagos') {
             datos = {
                 idPago: datos.idPago || 0,
                 idPedido: Number(datos.idPedido),
-                metodoPago: datos.metodoPago,
+                metodoPago: datos.metodoPago || '',
                 monto: Number(datos.monto),
                 fechaPago: datos.fechaPago,
-                estado: datos.estado
+                estado: datos.estado || 'Pendiente'
             };
         }
 
-        if (vistaActiva === 'usuarios' && modoEdicion && !datos.password) {
+        if (vistaActiva === 'usuarios' && modoEdicion && !datos.password)
             delete datos.password;
-        }
 
         let url = `${API}/${endpointMap[vistaActiva]}`;
         if (modoEdicion) url += `/${datos[idKey]}`;
@@ -168,10 +153,7 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(url, {
                 method: modoEdicion ? 'PUT' : 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(datos)
             });
 
@@ -180,13 +162,9 @@ export default function AdminDashboard() {
                 throw new Error(mensaje || 'Error al guardar');
             }
 
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'success',
-                title: 'Guardado correctamente', timer: 2000, showConfirmButton: false
-            });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado correctamente', timer: 2000, showConfirmButton: false });
             setModalAbierto(false);
             setRefresh(r => !r);
-
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Error', text: error.message });
         } finally {
@@ -205,103 +183,221 @@ export default function AdminDashboard() {
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar'
         });
-
         if (!result.isConfirmed) return;
 
         const token = localStorage.getItem('token');
-        const endpointMap = {
-            productos: 'Productos',
-            categorias: 'Categorias',
-            usuarios: 'Usuarios',
-            pagos: 'Pagos'
-        };
+        const endpointMap = { productos: 'Productos', categorias: 'Categorias', usuarios: 'Usuarios', pagos: 'Pagos' };
 
         try {
-            const res = await fetch(
-                `${API}/${endpointMap[vistaActiva]}/${id}`,
-                { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await fetch(`${API}/${endpointMap[vistaActiva]}/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (!res.ok) throw new Error();
 
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'success',
-                title: 'Eliminado con éxito', timer: 2000, showConfirmButton: false
-            });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Eliminado con éxito', timer: 2000, showConfirmButton: false });
             setRefresh(r => !r);
-
         } catch {
             Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo eliminar el registro.' });
         }
     };
 
-    const descargarPDFFactura = (pago) => {
+    const descargarPDFFactura = async (pago) => {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+        // Una sola llamada que trae pago + cliente + productos
+        let factura = null;
+        try {
+            const res = await fetch(`${API}/Pagos/${pago.idPago}/factura`, { headers });
+            if (res.ok) factura = await res.json();
+        } catch (_) { }
+
+        // Si el endpoint falla, usar los datos básicos del pago
+        if (!factura) factura = { ...pago, cliente: null, productos: [] };
+
+        const cliente = factura.cliente;
+        const detallesPedido = factura.productos || [];
+
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const rosa = [201, 117, 138];
+        const oscuro = [42, 31, 31];
+        const gris = [107, 78, 78];
+        const claro = [247, 242, 239];
 
-        doc.setTextColor(42, 31, 31);
+        // ── Encabezado ────────────────────────────────────────────────────────
+        doc.setFillColor(...rosa);
+        doc.rect(0, 0, 210, 18, 'F');
         doc.setFont('times', 'italic');
-        doc.setFontSize(26);
-        doc.text('Beauty Store', 20, 25);
-
+        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Beauty Store', 12, 12);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(107, 78, 78);
-        doc.text('Sistema de Control Administrativo', 20, 31);
-        doc.text('Costa Rica', 20, 36);
+        doc.setFontSize(8);
+        doc.text('Sistema de Control Administrativo · Costa Rica', 12, 17);
 
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(42, 31, 31);
-        doc.setFontSize(12);
-        doc.text('COMPROBANTE DE PAGO', 130, 25);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`ID Transacción: #${pago.idPago}`, 130, 32);
-        doc.text(`Fecha Emisión: ${new Date(pago.fechaPago).toLocaleDateString('es-CR')}`, 130, 38);
-
-        doc.setDrawColor(232, 216, 210);
-        doc.setLineWidth(0.5);
-        doc.line(20, 45, 190, 45);
-
-        doc.setFont('helvetica', 'bold');
-        doc.text('Detalles del Registro:', 20, 55);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`ID Pedido: ${pago.idPedido ?? 'N/A'}`, 20, 62);
-        doc.text(`Método de Pago: ${pago.metodoPago ?? 'N/A'}`, 20, 68);
-        doc.text(`Estado del Pago: ${pago.estado ?? 'Procesado'}`, 20, 74);
-
-        doc.setDrawColor(42, 31, 31);
-        doc.setFillColor(247, 242, 239);
-        doc.rect(20, 84, 170, 8, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.text('Descripción del Concepto', 25, 89);
-        doc.text('Total', 160, 89);
-        doc.line(20, 92, 190, 92);
-
-        doc.setFont('helvetica', 'normal');
-        doc.text('Orden de Productos Cosméticos y Cuidado Personal', 25, 104);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`₡${pago.monto}`, 160, 104);
-
-        doc.setDrawColor(232, 216, 210);
-        doc.line(20, 112, 190, 112);
-
-        doc.setFont('helvetica', 'normal');
-        doc.text('Subtotal:', 135, 126);
-        doc.text(`₡${pago.monto}`, 160, 126);
-        doc.line(130, 130, 190, 130);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Total Final:', 135, 136);
-        doc.text(`₡${pago.monto}`, 160, 136);
-
-        doc.setFont('times', 'italic');
         doc.setFontSize(11);
-        doc.setTextColor(201, 117, 138);
-        doc.text('¡Gracias por apoyar nuestro espacio de belleza!', 20, 160);
+        doc.setTextColor(255, 255, 255);
+        doc.text('COMPROBANTE DE PAGO', 130, 9);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.text(`Nº Transacción: #${pago.idPago}`, 130, 14);
+
+        // ── Info empresa y número de factura ──────────────────────────────────
+        let y = 28;
+        doc.setTextColor(...oscuro);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('Emitido por:', 12, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gris);
+        doc.text('Beauty Store S.A.  ·  San José, Costa Rica', 12, y + 5);
+        doc.text(`Fecha de emisión: ${new Date(pago.fechaPago).toLocaleDateString('es-CR')}`, 12, y + 10);
+        doc.text(`Hora: ${new Date(pago.fechaPago).toLocaleTimeString('es-CR')}`, 12, y + 15);
+
+        doc.setTextColor(...oscuro);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Número de Pedido:', 130, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gris);
+        doc.text(`#${pago.idPedido}`, 130, y + 5);
+
+        // ── Datos del cliente ─────────────────────────────────────────────────
+        y = 56;
+        doc.setDrawColor(...rosa);
+        doc.setLineWidth(0.4);
+        doc.line(12, y, 198, y);
+
+        doc.setFillColor(...claro);
+        doc.rect(12, y + 2, 186, 24, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...rosa);
+        doc.text('DATOS DEL CLIENTE', 16, y + 9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...oscuro);
+
+        if (cliente) {
+            doc.text(`Nombre:  ${cliente.nombre || '—'}`, 16, y + 15);
+            doc.text(`Correo:  ${cliente.correo || '—'}`, 16, y + 20);
+            doc.text(`ID Usuario:  ${pago.idUsuario}`, 120, y + 15);
+            doc.text(`Rol:  ${cliente.rol || '—'}`, 120, y + 20);
+        } else {
+            doc.text(`ID Usuario: ${pago.idUsuario || '—'}   (datos de cliente no disponibles)`, 16, y + 15);
+        }
+
+        // ── Método y estado de pago ───────────────────────────────────────────
+        y = 90;
+        doc.setDrawColor(...rosa);
+        doc.line(12, y, 198, y);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...rosa);
+        doc.text('INFORMACIÓN DEL PAGO', 16, y + 8);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...oscuro);
+        doc.text(`Método de pago:`, 16, y + 15);
+        doc.setFont('helvetica', 'bold');
+        doc.text(pago.metodoPago || 'N/A', 55, y + 15);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Estado:`, 120, y + 15);
+        doc.setFont('helvetica', 'bold');
+        const estadoColor = pago.estado === 'Pagado' ? [22, 163, 74] : pago.estado === 'Pendiente' ? [202, 138, 4] : [220, 38, 38];
+        doc.setTextColor(...estadoColor);
+        doc.text(pago.estado || 'Pendiente', 140, y + 15);
+        doc.setTextColor(...oscuro);
+
+        // ── Detalle de productos ──────────────────────────────────────────────
+        y = 115;
+        doc.setDrawColor(...rosa);
+        doc.line(12, y, 198, y);
+
+        // Encabezado tabla
+        doc.setFillColor(...oscuro);
+        doc.rect(12, y + 2, 186, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text('PRODUCTO', 16, y + 7.5);
+        doc.text('CANT.', 120, y + 7.5);
+        doc.text('PRECIO UNIT.', 140, y + 7.5);
+        doc.text('SUBTOTAL', 172, y + 7.5);
+
+        y += 13;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+
+        if (detallesPedido.length > 0) {
+            detallesPedido.forEach((det, i) => {
+                if (i % 2 === 0) {
+                    doc.setFillColor(250, 246, 244);
+                    doc.rect(12, y - 4, 186, 7, 'F');
+                }
+                doc.setTextColor(...oscuro);
+                const nombreProd = det.nombre || det.producto?.nombre || `Producto #${det.idProducto}`;
+                doc.text(nombreProd.substring(0, 45), 16, y);
+                doc.text(String(det.cantidad), 124, y);
+                doc.text(formatoMoneda(det.precioUnitario), 140, y);
+                doc.text(formatoMoneda(det.cantidad * det.precioUnitario), 172, y);
+                y += 8;
+            });
+        } else {
+            doc.setTextColor(...gris);
+            doc.text('Orden de Productos Cosméticos y Cuidado Personal', 16, y);
+            doc.text('1', 124, y);
+            doc.text(formatoMoneda(pago.monto), 140, y);
+            doc.text(formatoMoneda(pago.monto), 172, y);
+            y += 8;
+        }
+
+        // ── Totales ───────────────────────────────────────────────────────────
+        y += 4;
+        doc.setDrawColor(...rosa);
+        doc.line(130, y, 198, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gris);
+        doc.text('Subtotal:', 140, y);
+        doc.setTextColor(...oscuro);
+        doc.text(formatoMoneda(pago.monto), 172, y);
+        y += 6;
+        doc.setTextColor(...gris);
+        doc.text('Impuestos (IVA 13%):', 132, y);
+        doc.setTextColor(...oscuro);
+        doc.text(formatoMoneda(pago.monto * 0.13), 172, y);
+        y += 6;
+        doc.setFillColor(...oscuro);
+        doc.rect(130, y - 4, 68, 9, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text('TOTAL:', 140, y + 2);
+        doc.text(formatoMoneda(pago.monto), 172, y + 2);
+
+        // ── Pie de página ─────────────────────────────────────────────────────
+        const piePagina = 282;
+        doc.setDrawColor(...rosa);
+        doc.setLineWidth(0.3);
+        doc.line(12, piePagina - 8, 198, piePagina - 8);
+        doc.setFont('times', 'italic');
+        doc.setFontSize(10);
+        doc.setTextColor(...rosa);
+        doc.text('¡Gracias por apoyar nuestro espacio de belleza!', 12, piePagina - 3);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...gris);
+        doc.text('Este documento es un comprobante oficial de Beauty Store S.A. · beautystorecr.com', 12, piePagina + 2);
+        doc.text(`Generado el ${new Date().toLocaleString('es-CR')}`, 148, piePagina + 2);
 
         doc.save(`Factura_BeautyStore_#${pago.idPago}.pdf`);
     };
 
-    // ─── Encabezados de tabla ──────────────────────────────────────────────────
+    // ─── Encabezados ──────────────────────────────────────────────────────────
     const trHead = "text-xs tracking-widest text-[#C4975A] uppercase border-b border-[#E8D8D2] bg-[#FAFAF8]";
     const th = "p-4 font-medium";
     const thR = "p-4 font-medium text-right";
@@ -320,6 +416,8 @@ export default function AdminDashboard() {
             <tr className={trHead}>
                 <th className={th}>ID</th>
                 <th className={th}>Nombre</th>
+                <th className={th}>Descripción</th>
+                <th className={th}>Imagen</th>
                 <th className={thR}>Acciones</th>
             </tr>
         );
@@ -344,11 +442,11 @@ export default function AdminDashboard() {
         );
     };
 
-    // ─── Filas de tabla ────────────────────────────────────────────────────────
+    // ─── Filas ─────────────────────────────────────────────────────────────────
     const renderFilaTabla = (item, idx) => {
         const id = item.idProducto || item.idCategoria || item.idUsuario || item.idPago;
         return (
-            <tr key={idx} className="border-t border-[#E8D8D2] hover:bg-white transition-colors">
+            <tr key={idx} className="border-t border-[#E8D8D2] hover:bg-[#FAFAF8] transition-colors">
 
                 {vistaActiva === 'productos' && (<>
                     <td className="p-4 font-medium text-[#2A1F1F]">{item.nombre}</td>
@@ -364,6 +462,20 @@ export default function AdminDashboard() {
                 {vistaActiva === 'categorias' && (<>
                     <td className="p-4 text-[#6B4E4E]">{item.idCategoria}</td>
                     <td className="p-4 font-medium text-[#2A1F1F]">{item.nombre}</td>
+                    <td className="p-4 text-[#6B4E4E] max-w-[200px] truncate">{item.descripcion || '—'}</td>
+                    <td className="p-4 text-[#6B4E4E]">
+                        {item.imagen ? (
+                            <div className="flex items-center gap-2">
+                                <img
+                                    src={`/img/${item.imagen}`}
+                                    alt={item.nombre}
+                                    className="w-8 h-8 object-cover rounded border border-[#E8D8D2]"
+                                    onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }}
+                                />
+                                <span className="text-xs truncate max-w-[100px]">{item.imagen}</span>
+                            </div>
+                        ) : '—'}
+                    </td>
                 </>)}
 
                 {vistaActiva === 'usuarios' && (<>
@@ -379,39 +491,32 @@ export default function AdminDashboard() {
                 {vistaActiva === 'pagos' && (<>
                     <td className="p-4 font-medium text-[#2A1F1F]">{item.idPago}</td>
                     <td className="p-4 text-[#6B4E4E]">{item.idPedido}</td>
-                    <td className="p-4 text-[#6B4E4E]">{item.metodoPago}</td>
+                    <td className="p-4 text-[#6B4E4E]">{item.metodoPago || '—'}</td>
                     <td className="p-4 text-[#6B4E4E]">{formatoMoneda(item.monto)}</td>
-                    {/* ✅ Corregido: era item.fecha */}
                     <td className="p-4 text-[#6B4E4E]">{new Date(item.fechaPago).toLocaleDateString('es-CR')}</td>
                     <td className="p-4">
                         <span className={`px-2 py-1 text-xs rounded-full uppercase tracking-wide ${item.estado === 'Pagado' ? 'bg-green-100 text-green-700' :
-                                item.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-red-100 text-red-700'
+                            item.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
                             }`}>
-                            {item.estado}
+                            {item.estado || 'Pendiente'}
                         </span>
                     </td>
                 </>)}
 
                 <td className="p-4 text-right space-x-3">
                     {vistaActiva === 'pagos' && (
-                        <button
-                            onClick={() => descargarPDFFactura(item)}
-                            className="text-[#C9758A] hover:text-[#2A1F1F] text-sm font-medium tracking-wide transition-colors mr-2"
-                        >
+                        <button onClick={() => descargarPDFFactura(item)}
+                            className="text-[#C9758A] hover:text-[#2A1F1F] text-sm font-medium tracking-wide transition-colors mr-2">
                             PDF FACTURA
                         </button>
                     )}
-                    <button
-                        onClick={() => abrirModal(item)}
-                        className="text-[#C4975A] hover:text-[#2A1F1F] text-sm font-medium tracking-wide transition-colors"
-                    >
+                    <button onClick={() => abrirModal(item)}
+                        className="text-[#C4975A] hover:text-[#2A1F1F] text-sm font-medium tracking-wide transition-colors">
                         EDITAR
                     </button>
-                    <button
-                        onClick={() => confirmarEliminar(id)}
-                        className="text-red-500 hover:text-red-700 text-sm font-medium tracking-wide transition-colors"
-                    >
+                    <button onClick={() => confirmarEliminar(id)}
+                        className="text-red-500 hover:text-red-700 text-sm font-medium tracking-wide transition-colors">
                         ELIMINAR
                     </button>
                 </td>
@@ -419,10 +524,8 @@ export default function AdminDashboard() {
         );
     };
 
-    // ─── Render principal ──────────────────────────────────────────────────────
     return (
         <div className="flex h-screen bg-[#FAFAF8]" style={sans}>
-
             {/* Sidebar */}
             <aside className="w-64 bg-[#2A1F1F] text-white p-6 flex flex-col">
                 <div className="mb-10 text-center">
@@ -432,37 +535,26 @@ export default function AdminDashboard() {
                 </div>
                 <nav className="flex-1 space-y-2">
                     {['dashboard', 'productos', 'categorias', 'usuarios', 'pagos'].map(v => (
-                        <button
-                            key={v}
-                            onClick={() => setVistaActiva(v)}
-                            className={`block w-full text-left px-4 py-3 rounded text-sm tracking-widest uppercase transition-colors ${vistaActiva === v
-                                    ? 'bg-[#C9758A] text-white font-medium'
-                                    : 'text-gray-400 hover:bg-white/10'
-                                }`}
-                        >
+                        <button key={v} onClick={() => setVistaActiva(v)}
+                            className={`block w-full text-left px-4 py-3 rounded text-sm tracking-widest uppercase transition-colors ${vistaActiva === v ? 'bg-[#C9758A] text-white font-medium' : 'text-gray-400 hover:bg-white/10'
+                                }`}>
                             {v}
                         </button>
                     ))}
                 </nav>
-                <button
-                    onClick={() => { localStorage.clear(); window.location.href = '/login'; }}
-                    className="mt-auto px-4 py-3 text-sm tracking-widest uppercase text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors text-left w-full"
-                >
+                <button onClick={() => { localStorage.clear(); window.location.href = '/login'; }}
+                    className="mt-auto px-4 py-3 text-sm tracking-widest uppercase text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors text-left w-full">
                     Cerrar Sesión
                 </button>
             </aside>
 
-            {/* Contenido principal */}
+            {/* Contenido */}
             <main className="flex-1 p-10 overflow-y-auto">
                 <div className="flex justify-between items-end mb-8 border-b border-[#E8D8D2] pb-4">
-                    <h2 className="text-4xl font-semibold text-[#2A1F1F] capitalize" style={serif}>
-                        {vistaActiva}
-                    </h2>
+                    <h2 className="text-4xl font-semibold text-[#2A1F1F] capitalize" style={serif}>{vistaActiva}</h2>
                     {['productos', 'categorias', 'usuarios', 'pagos'].includes(vistaActiva) && (
-                        <button
-                            onClick={() => abrirModal()}
-                            className="px-6 py-2.5 bg-[#2A1F1F] text-white text-sm font-medium tracking-widest hover:bg-[#C9758A] transition-colors"
-                        >
+                        <button onClick={() => abrirModal()}
+                            className="px-6 py-2.5 bg-[#2A1F1F] text-white text-sm font-medium tracking-widest hover:bg-[#C9758A] transition-colors">
                             + AGREGAR NUEVO
                         </button>
                     )}
@@ -475,7 +567,7 @@ export default function AdminDashboard() {
                             {[
                                 { title: 'Ventas Totales', value: formatoMoneda(stats.totalVentas) },
                                 { title: 'Total Productos', value: stats.totalProductos },
-                                { title: 'Stock Crítico', value: stats.stockBajo }
+                                { title: 'Unidades Stock Crítico', value: stats.stockBajo }
                             ].map((i, idx) => (
                                 <div key={idx} className="bg-white p-6 border border-[#E8D8D2] shadow-sm rounded-sm">
                                     <h3 className="text-xs font-medium tracking-widest text-[#C4975A] uppercase mb-2">{i.title}</h3>
@@ -483,40 +575,30 @@ export default function AdminDashboard() {
                                 </div>
                             ))}
                         </div>
-
                         <div className="bg-white p-8 border border-[#E8D8D2] shadow-sm rounded-sm h-[400px] w-full">
-                            <h3 className="text-xl font-semibold text-[#2A1F1F] mb-6" style={serif}>
-                                Tendencia de Ventas (Últimos 7 pagos)
-                            </h3>
+                            <h3 className="text-xl font-semibold text-[#2A1F1F] mb-6" style={serif}>Tendencia de Ventas (Agrupado por Fecha)</h3>
                             <ResponsiveContainer width="100%" height="85%">
                                 <BarChart data={dataVentas}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8D8D2" />
                                     <XAxis dataKey="name" tick={{ fill: '#6B4E4E', fontSize: 12 }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fill: '#6B4E4E', fontSize: 12 }} axisLine={false} tickLine={false} />
-                                    <Tooltip
-                                        cursor={{ fill: '#F2E8E4' }}
+                                    <Tooltip cursor={{ fill: '#F2E8E4' }}
                                         contentStyle={{ backgroundColor: '#2A1F1F', color: 'white', border: 'none' }}
-                                        formatter={(v) => [formatoMoneda(v), 'Ventas']}
-                                    />
+                                        formatter={(v) => [formatoMoneda(v), 'Ventas']} />
                                     <Bar dataKey="ventas" fill="#C9758A" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
-
                 ) : (
-                    /* Tabla genérica */
                     <div className="bg-[#F7F2EF] p-1 rounded-sm border border-[#E8D8D2]">
                         <div className="bg-white overflow-x-auto">
                             <table className="w-full text-left whitespace-nowrap">
-                                <thead>
-                                    {renderEncabezadosTabla()}
-                                </thead>
+                                <thead>{renderEncabezadosTabla()}</thead>
                                 <tbody>
-                                    {(
-                                        vistaActiva === 'productos' ? productos :
-                                            vistaActiva === 'categorias' ? categorias :
-                                                vistaActiva === 'usuarios' ? usuarios : pagos
+                                    {(vistaActiva === 'productos' ? productos :
+                                        vistaActiva === 'categorias' ? categorias :
+                                            vistaActiva === 'usuarios' ? usuarios : pagos
                                     ).map(renderFilaTabla)}
                                 </tbody>
                             </table>
@@ -528,11 +610,9 @@ export default function AdminDashboard() {
             {/* Modal CRUD */}
             {modalAbierto && (
                 <div className="fixed inset-0 bg-[#2A1F1F]/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white p-8 max-w-md w-full border border-[#E8D8D2] shadow-xl relative">
-                        <button
-                            onClick={() => setModalAbierto(false)}
-                            className="absolute top-4 right-4 text-2xl text-[#A49393] hover:text-[#2A1F1F]"
-                        >
+                    <div className="bg-white p-8 max-w-md w-full border border-[#E8D8D2] shadow-xl relative max-h-[90vh] overflow-y-auto">
+                        <button onClick={() => setModalAbierto(false)}
+                            className="absolute top-4 right-4 text-2xl text-[#A49393] hover:text-[#2A1F1F]">
                             &times;
                         </button>
                         <h3 className="text-2xl font-semibold text-[#2A1F1F] mb-6" style={serif}>
@@ -541,18 +621,34 @@ export default function AdminDashboard() {
 
                         <form onSubmit={guardarItem} className="space-y-4">
 
-                            {vistaActiva !== 'pagos' && vistaActiva !== 'usuarios' && (
+                            {/* Campo Nombre — productos y categorias */}
+                            {(vistaActiva === 'productos' || vistaActiva === 'categorias') && (
                                 <div>
                                     <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Nombre</label>
-                                    <input
-                                        required
-                                        name="nombre"
-                                        value={itemActual.nombre || ''}
-                                        onChange={manejarCambioInput}
-                                        className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]"
-                                    />
+                                    <input required name="nombre" value={itemActual.nombre || ''} onChange={manejarCambioInput}
+                                        className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
                                 </div>
                             )}
+
+                            {/* ✅ FIX CATEGORIAS: campos descripcion e imagen */}
+                            {vistaActiva === 'categorias' && (<>
+                                <div>
+                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Descripción</label>
+                                    <textarea name="descripcion" value={itemActual.descripcion || ''} onChange={manejarCambioInput}
+                                        className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A] resize-none h-20" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Nombre de imagen</label>
+                                    <input name="imagen" value={itemActual.imagen || ''} onChange={manejarCambioInput}
+                                        placeholder="ej: maquillaje.jpg"
+                                        className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
+                                    {itemActual.imagen && (
+                                        <img src={`/img/${itemActual.imagen}`} alt="preview"
+                                            className="mt-2 w-16 h-16 object-cover border border-[#E8D8D2] rounded"
+                                            onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }} />
+                                    )}
+                                </div>
+                            </>)}
 
                             {/* Productos */}
                             {vistaActiva === 'productos' && (<>
@@ -579,8 +675,9 @@ export default function AdminDashboard() {
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A] resize-none h-20" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">URL Imagen</label>
+                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Nombre de imagen</label>
                                     <input required name="imagen" value={itemActual.imagen || ''} onChange={manejarCambioInput}
+                                        placeholder="ej: producto.jpg"
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
                                 </div>
                             </>)}
@@ -615,7 +712,7 @@ export default function AdminDashboard() {
                                 </div>
                             </>)}
 
-                            {/* Pagos */}
+                            {/* ✅ FIX PAGOS: metodoPago y estado con nombre correcto */}
                             {vistaActiva === 'pagos' && (<>
                                 <div>
                                     <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">ID Pedido</label>
@@ -627,6 +724,7 @@ export default function AdminDashboard() {
                                     <select required name="metodoPago" value={itemActual.metodoPago || ''} onChange={manejarCambioInput}
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]">
                                         <option value="">Seleccionar...</option>
+                                        <option value="PayPal">PayPal</option>
                                         <option value="Tarjeta">Tarjeta</option>
                                         <option value="SINPE">SINPE</option>
                                         <option value="Efectivo">Efectivo</option>
@@ -646,7 +744,7 @@ export default function AdminDashboard() {
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Estado de Transacción</label>
+                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Estado</label>
                                     <select required name="estado" value={itemActual.estado || ''} onChange={manejarCambioInput}
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]">
                                         <option value="">Seleccionar...</option>
@@ -658,18 +756,12 @@ export default function AdminDashboard() {
                             </>)}
 
                             <div className="pt-4 flex justify-end gap-3 border-t border-[#E8D8D2] mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setModalAbierto(false)}
-                                    className="px-5 py-2.5 text-sm font-medium tracking-widest text-[#6B4E4E] hover:text-[#2A1F1F] transition-colors"
-                                >
+                                <button type="button" onClick={() => setModalAbierto(false)}
+                                    className="px-5 py-2.5 text-sm font-medium tracking-widest text-[#6B4E4E] hover:text-[#2A1F1F] transition-colors">
                                     CANCELAR
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={cargandoEnvio}
-                                    className="px-6 py-2.5 bg-[#2A1F1F] text-white text-sm font-medium tracking-widest hover:bg-[#C9758A] transition-colors disabled:opacity-70"
-                                >
+                                <button type="submit" disabled={cargandoEnvio}
+                                    className="px-6 py-2.5 bg-[#2A1F1F] text-white text-sm font-medium tracking-widest hover:bg-[#C9758A] transition-colors disabled:opacity-70">
                                     {cargandoEnvio ? 'GUARDANDO...' : modoEdicion ? 'ACTUALIZAR' : 'GUARDAR'}
                                 </button>
                             </div>
