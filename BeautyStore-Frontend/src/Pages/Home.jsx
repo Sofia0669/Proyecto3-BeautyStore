@@ -96,7 +96,7 @@ export default function Home() {
             <Navbar />
 
             {/* Hero */}
-            <section className="grid grid-cols-1 md:grid-cols-2 min-h-[560px]">
+            <section className="grid grid-cols-1 md:grid-cols-2 min-h-[300px]">
                 <div className="flex flex-col justify-center gap-6 px-12 lg:px-16 py-16 bg-[#FAFAF8]">
                     <p className="text-xs font-medium tracking-[0.2em] text-[#C4975A] uppercase" style={sans}>
                         ✦ Tu Tienda de Belleza Real
@@ -211,7 +211,7 @@ export default function Home() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {productosDestacados.map((p) => (
                             <div key={p.idProducto} className="prod-card bg-white border border-[#E8D8D2] flex flex-col h-full overflow-hidden cursor-pointer">
-                                <div className="relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
+                                <div className="relative overflow-hidden" style={{ aspectRatio: '4/3' }}>
                                     <img
                                         src={`/img/${p.imagen}`}
                                         alt={p.nombre}
@@ -219,7 +219,7 @@ export default function Home() {
                                         onError={(e) => { e.target.src = "/img/sin-imagen.webp" }}
                                     />
                                 </div>
-                                <div className="p-5 flex flex-col flex-grow">
+                                <div className="p-4 flex flex-col flex-grow">
                                     <div className="text-[10px] font-medium text-[#C4975A] uppercase tracking-widest mb-1" style={sans}>
                                         {obtenerNombreCategoria(p.idCategoria)}
                                     </div>
