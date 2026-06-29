@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const serif = { fontFamily: "'Cormorant Garamond', 'Times New Roman', Georgia, serif" };
 const sans = { fontFamily: "'Jost', 'Inter', sans-serif" };
@@ -206,195 +207,142 @@ export default function AdminDashboard() {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-        // Una sola llamada que trae pago + cliente + productos
         let factura = null;
         try {
             const res = await fetch(`${API}/Pagos/${pago.idPago}/factura`, { headers });
             if (res.ok) factura = await res.json();
         } catch (_) { }
-
-        // Si el endpoint falla, usar los datos básicos del pago
         if (!factura) factura = { ...pago, cliente: null, productos: [] };
 
         const cliente = factura.cliente;
         const detallesPedido = factura.productos || [];
+        const estadoColor = pago.estado === 'Pagado' ? '#16A34A' : pago.estado === 'Pendiente' ? '#CA8A04' : '#DC2626';
 
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const rosa = [201, 117, 138];
-        const oscuro = [42, 31, 31];
-        const gris = [107, 78, 78];
-        const claro = [247, 242, 239];
+        const productosHtml = detallesPedido.length > 0
+            ? detallesPedido.map((det, i) => `
+            <tr style="background:${i % 2 === 0 ? '#FAF6F4' : '#fff'}">
+                <td style="padding:7px 10px">${(det.nombre || `Producto #${det.idProducto}`).substring(0, 50)}</td>
+                <td style="padding:7px 10px;text-align:center">${det.cantidad}</td>
+                <td style="padding:7px 10px;text-align:right">${formatoMoneda(det.precioUnitario)}</td>
+                <td style="padding:7px 10px;text-align:right">${formatoMoneda(det.cantidad * det.precioUnitario)}</td>
+            </tr>`).join('')
+            : `<tr>
+            <td style="padding:7px 10px;color:#6B4E4E">Orden de Productos Cosméticos</td>
+            <td style="padding:7px 10px;text-align:center">1</td>
+            <td style="padding:7px 10px;text-align:right">${formatoMoneda(pago.monto)}</td>
+            <td style="padding:7px 10px;text-align:right">${formatoMoneda(pago.monto)}</td>
+          </tr>`;
 
-        // ── Encabezado ────────────────────────────────────────────────────────
-        doc.setFillColor(...rosa);
-        doc.rect(0, 0, 210, 18, 'F');
-        doc.setFont('times', 'italic');
-        doc.setFontSize(20);
-        doc.setTextColor(255, 255, 255);
-        doc.text('Beauty Store', 12, 12);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.text('Sistema de Control Administrativo · Costa Rica', 12, 17);
+        const div = document.createElement('div');
+        div.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:#fff;font-family:Jost,Inter,sans-serif;color:#2A1F1F;';
+        div.innerHTML = `
+        <div style="background:#C9758A;padding:14px 28px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <div style="font-family:'Times New Roman',serif;font-style:italic;font-size:22px;color:#fff;font-weight:600">Beauty Store</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.85);margin-top:2px">Sistema de Control Administrativo · Costa Rica</div>
+            </div>
+            <div style="text-align:right;color:#fff">
+                <div style="font-weight:700;font-size:13px;letter-spacing:1px">COMPROBANTE DE PAGO</div>
+                <div style="font-size:10px;margin-top:2px">Nº Transacción: #${pago.idPago}</div>
+            </div>
+        </div>
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(255, 255, 255);
-        doc.text('COMPROBANTE DE PAGO', 130, 9);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.text(`Nº Transacción: #${pago.idPago}`, 130, 14);
+        <div style="padding:24px 32px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px">
+                <div>
+                    <div style="font-weight:700;font-size:11px;margin-bottom:3px">Emitido por:</div>
+                    <div style="font-size:10px;color:#6B4E4E">Beauty Store S.A. · San José, Costa Rica</div>
+                    <div style="font-size:10px;color:#6B4E4E">Fecha: ${new Date(pago.fechaPago).toLocaleDateString('es-CR')}</div>
+                    <div style="font-size:10px;color:#6B4E4E">Hora: ${new Date(pago.fechaPago).toLocaleTimeString('es-CR')}</div>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:11px;margin-bottom:3px">Número de Pedido:</div>
+                    <div style="font-size:10px;color:#6B4E4E">#${pago.idPedido}</div>
+                </div>
+            </div>
 
-        // ── Info empresa y número de factura ──────────────────────────────────
-        let y = 28;
-        doc.setTextColor(...oscuro);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text('Emitido por:', 12, y);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gris);
-        doc.text('Beauty Store S.A.  ·  San José, Costa Rica', 12, y + 5);
-        doc.text(`Fecha de emisión: ${new Date(pago.fechaPago).toLocaleDateString('es-CR')}`, 12, y + 10);
-        doc.text(`Hora: ${new Date(pago.fechaPago).toLocaleTimeString('es-CR')}`, 12, y + 15);
+            <div style="border-top:1.5px solid #C9758A;padding-top:12px;margin-bottom:14px">
+                <div style="background:#F7F2EF;padding:14px;border-radius:2px">
+                    <div style="font-weight:700;font-size:10px;color:#C9758A;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px">Datos del Cliente</div>
+                    ${cliente
+                ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:10px">
+                            <div><b>Nombre:</b> ${cliente.nombre || '—'}</div>
+                            <div><b>ID Usuario:</b> ${pago.idUsuario}</div>
+                        </div>`
+                : `<div style="font-size:10px">ID Usuario: ${pago.idUsuario || '—'} (datos no disponibles)</div>`}
+                </div>
+            </div>
 
-        doc.setTextColor(...oscuro);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Número de Pedido:', 130, y);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gris);
-        doc.text(`#${pago.idPedido}`, 130, y + 5);
+            <div style="border-top:1.5px solid #C9758A;padding-top:12px;margin-bottom:14px">
+                <div style="font-weight:700;font-size:10px;color:#C9758A;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px">Información del Pago</div>
+                <div style="display:flex;gap:40px;font-size:10px">
+                    <div><span style="color:#6B4E4E">Método: </span><b>${pago.metodoPago || 'N/A'}</b></div>
+                    <div><span style="color:#6B4E4E">Estado: </span><b style="color:${estadoColor}">${pago.estado || 'Pendiente'}</b></div>
+                </div>
+            </div>
 
-        // ── Datos del cliente ─────────────────────────────────────────────────
-        y = 56;
-        doc.setDrawColor(...rosa);
-        doc.setLineWidth(0.4);
-        doc.line(12, y, 198, y);
+            <div style="border-top:1.5px solid #C9758A;padding-top:12px;margin-bottom:14px">
+                <table style="width:100%;border-collapse:collapse;font-size:10px">
+                    <thead>
+                        <tr style="background:#2A1F1F;color:#fff">
+                            <th style="padding:7px 10px;text-align:left;font-weight:600">PRODUCTO</th>
+                            <th style="padding:7px 10px;text-align:center;font-weight:600">CANT.</th>
+                            <th style="padding:7px 10px;text-align:right;font-weight:600">PRECIO UNIT.</th>
+                            <th style="padding:7px 10px;text-align:right;font-weight:600">SUBTOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>${productosHtml}</tbody>
+                </table>
+            </div>
 
-        doc.setFillColor(...claro);
-        doc.rect(12, y + 2, 186, 24, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...rosa);
-        doc.text('DATOS DEL CLIENTE', 16, y + 9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...oscuro);
+            <div style="display:flex;justify-content:flex-end">
+                <div style="min-width:260px;font-size:10px">
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #C9758A;color:#6B4E4E">
+                        <span>Subtotal:</span><span style="color:#2A1F1F">${formatoMoneda(pago.monto)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;color:#6B4E4E">
+                        <span>Impuestos (IVA 13%):</span><span style="color:#2A1F1F">${formatoMoneda(pago.monto * 0.13)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#2A1F1F;color:#fff;font-weight:700;font-size:12px;margin-top:5px">
+                        <span>TOTAL:</span><span>${formatoMoneda(pago.monto)}</span>
+                    </div>
+                </div>
+            </div>
 
-        if (cliente) {
-            doc.text(`Nombre:  ${cliente.nombre || '—'}`, 16, y + 15);
-            doc.text(`Correo:  ${cliente.correo || '—'}`, 16, y + 20);
-            doc.text(`ID Usuario:  ${pago.idUsuario}`, 120, y + 15);
-            doc.text(`Rol:  ${cliente.rol || '—'}`, 120, y + 20);
-        } else {
-            doc.text(`ID Usuario: ${pago.idUsuario || '—'}   (datos de cliente no disponibles)`, 16, y + 15);
+            <div style="margin-top:28px;border-top:1px solid #C9758A;padding-top:10px">
+                <div style="font-family:'Times New Roman',serif;font-style:italic;font-size:12px;color:#C9758A;margin-bottom:5px">¡Gracias por apoyar nuestro espacio de belleza!</div>
+                <div style="font-size:9px;color:#6B4E4E;display:flex;justify-content:space-between">
+                    <span>Comprobante oficial de Beauty Store S.A. · beautystorecr.com</span>
+                    <span>Generado el ${new Date().toLocaleString('es-CR')}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(div);
+        try {
+            const canvas = await html2canvas(div, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const W = pdf.internal.pageSize.getWidth();
+            const H = pdf.internal.pageSize.getHeight();
+            const imgH = (canvas.height * W) / canvas.width;
+
+            // Soporte multi-página si la factura es muy larga
+            let pos = 0, restante = imgH;
+            pdf.addImage(imgData, 'PNG', 0, pos, W, imgH);
+            restante -= H;
+            while (restante > 0) {
+                pos -= H;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, pos, W, imgH);
+                restante -= H;
+            }
+
+            pdf.save(`Factura_BeautyStore_#${pago.idPago}.pdf`);
+        } finally {
+            document.body.removeChild(div);
         }
-
-        // ── Método y estado de pago ───────────────────────────────────────────
-        y = 90;
-        doc.setDrawColor(...rosa);
-        doc.line(12, y, 198, y);
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...rosa);
-        doc.text('INFORMACIÓN DEL PAGO', 16, y + 8);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...oscuro);
-        doc.text(`Método de pago:`, 16, y + 15);
-        doc.setFont('helvetica', 'bold');
-        doc.text(pago.metodoPago || 'N/A', 55, y + 15);
-
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Estado:`, 120, y + 15);
-        doc.setFont('helvetica', 'bold');
-        const estadoColor = pago.estado === 'Pagado' ? [22, 163, 74] : pago.estado === 'Pendiente' ? [202, 138, 4] : [220, 38, 38];
-        doc.setTextColor(...estadoColor);
-        doc.text(pago.estado || 'Pendiente', 140, y + 15);
-        doc.setTextColor(...oscuro);
-
-        // ── Detalle de productos ──────────────────────────────────────────────
-        y = 115;
-        doc.setDrawColor(...rosa);
-        doc.line(12, y, 198, y);
-
-        // Encabezado tabla
-        doc.setFillColor(...oscuro);
-        doc.rect(12, y + 2, 186, 8, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.5);
-        doc.setTextColor(255, 255, 255);
-        doc.text('PRODUCTO', 16, y + 7.5);
-        doc.text('CANT.', 120, y + 7.5);
-        doc.text('PRECIO UNIT.', 140, y + 7.5);
-        doc.text('SUBTOTAL', 172, y + 7.5);
-
-        y += 13;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-
-        if (detallesPedido.length > 0) {
-            detallesPedido.forEach((det, i) => {
-                if (i % 2 === 0) {
-                    doc.setFillColor(250, 246, 244);
-                    doc.rect(12, y - 4, 186, 7, 'F');
-                }
-                doc.setTextColor(...oscuro);
-                const nombreProd = det.nombre || det.producto?.nombre || `Producto #${det.idProducto}`;
-                doc.text(nombreProd.substring(0, 45), 16, y);
-                doc.text(String(det.cantidad), 124, y);
-                doc.text(formatoMoneda(det.precioUnitario), 140, y);
-                doc.text(formatoMoneda(det.cantidad * det.precioUnitario), 172, y);
-                y += 8;
-            });
-        } else {
-            doc.setTextColor(...gris);
-            doc.text('Orden de Productos Cosméticos y Cuidado Personal', 16, y);
-            doc.text('1', 124, y);
-            doc.text(formatoMoneda(pago.monto), 140, y);
-            doc.text(formatoMoneda(pago.monto), 172, y);
-            y += 8;
-        }
-
-        // ── Totales ───────────────────────────────────────────────────────────
-        y += 4;
-        doc.setDrawColor(...rosa);
-        doc.line(130, y, 198, y);
-        y += 6;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gris);
-        doc.text('Subtotal:', 140, y);
-        doc.setTextColor(...oscuro);
-        doc.text(formatoMoneda(pago.monto), 172, y);
-        y += 6;
-        doc.setTextColor(...gris);
-        doc.text('Impuestos (IVA 13%):', 132, y);
-        doc.setTextColor(...oscuro);
-        doc.text(formatoMoneda(pago.monto * 0.13), 172, y);
-        y += 6;
-        doc.setFillColor(...oscuro);
-        doc.rect(130, y - 4, 68, 9, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(255, 255, 255);
-        doc.text('TOTAL:', 140, y + 2);
-        doc.text(formatoMoneda(pago.monto), 172, y + 2);
-
-        // ── Pie de página ─────────────────────────────────────────────────────
-        const piePagina = 282;
-        doc.setDrawColor(...rosa);
-        doc.setLineWidth(0.3);
-        doc.line(12, piePagina - 8, 198, piePagina - 8);
-        doc.setFont('times', 'italic');
-        doc.setFontSize(10);
-        doc.setTextColor(...rosa);
-        doc.text('¡Gracias por apoyar nuestro espacio de belleza!', 12, piePagina - 3);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...gris);
-        doc.text('Este documento es un comprobante oficial de Beauty Store S.A. · beautystorecr.com', 12, piePagina + 2);
-        doc.text(`Generado el ${new Date().toLocaleString('es-CR')}`, 148, piePagina + 2);
-
-        doc.save(`Factura_BeautyStore_#${pago.idPago}.pdf`);
     };
 
     // ─── Encabezados ──────────────────────────────────────────────────────────
@@ -425,6 +373,7 @@ export default function AdminDashboard() {
             <tr className={trHead}>
                 <th className={th}>Nombre</th>
                 <th className={th}>Correo</th>
+                <th className={th}>Password</th>
                 <th className={th}>Rol</th>
                 <th className={thR}>Acciones</th>
             </tr>
@@ -481,6 +430,7 @@ export default function AdminDashboard() {
                 {vistaActiva === 'usuarios' && (<>
                     <td className="p-4 font-medium text-[#2A1F1F]">{item.nombre}</td>
                     <td className="p-4 text-[#6B4E4E]">{item.correo}</td>
+                    <td className="p-4 text-[#6B4E4E]">{item.password ? '********' : '—'}</td>
                     <td className="p-4">
                         <span className={`px-2 py-1 text-xs rounded-full uppercase tracking-wider ${item.rol === 'Admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
                             {item.rol}
@@ -694,13 +644,11 @@ export default function AdminDashboard() {
                                     <input required type="email" name="correo" value={itemActual.correo || ''} onChange={manejarCambioInput}
                                         className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
                                 </div>
-                                {!modoEdicion && (
-                                    <div>
-                                        <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Contraseña</label>
-                                        <input required type="password" name="password" value={itemActual.password || ''} onChange={manejarCambioInput}
-                                            className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
-                                    </div>
-                                )}
+                                <div>
+                                    <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Contraseña</label>
+                                    <input required type="password" name="password" value={itemActual.password || ''} onChange={manejarCambioInput}
+                                        className="w-full p-2 border border-[#E8D8D2] bg-[#FAFAF8] text-[#2A1F1F] focus:outline-none focus:border-[#C9758A]" />
+                                </div>
                                 <div>
                                     <label className="block text-xs font-medium tracking-widest text-[#2A1F1F] uppercase mb-1">Rol</label>
                                     <select required name="rol" value={itemActual.rol || ''} onChange={manejarCambioInput}

@@ -108,61 +108,7 @@ export default function Catalogo() {
                     Descubre nuestra selección exclusiva de productos diseñados para realzar tu belleza natural.
                 </p>
             </div>
-
-            {/* Categorías con imagen */}
-            {categorias.length > 0 && (
-                <div className="max-w-[1400px] mx-auto px-8 lg:px-16 pt-10 pb-2">
-                    <h2 className="text-xs tracking-[0.18em] text-[#C4975A] uppercase mb-6" style={sans}>
-                        Explorar por categoría
-                    </h2>
-                    <div className="flex gap-4 overflow-x-auto pb-2">
-                        {/* Botón "Todos" */}
-                        <button
-                            onClick={() => setFiltroCategoria(0)}
-                            className={`cat-btn flex-shrink-0 flex flex-col items-center gap-2 p-3 border transition-all ${filtroCategoria === 0
-                                    ? 'border-[#C9758A] bg-[#C9758A]/5'
-                                    : 'border-[#E8D8D2] hover:border-[#C9758A]'
-                                }`}
-                        >
-                            <div className="w-16 h-16 bg-[#F2E8E4] flex items-center justify-center overflow-hidden">
-                                <span className="text-2xl">✦</span>
-                            </div>
-                            <span className="text-xs font-medium tracking-wider text-[#2A1F1F]" style={sans}>
-                                Todos
-                            </span>
-                        </button>
-
-                        {/* Categorías de la BD */}
-                        {categorias.map(cat => (
-                            <button
-                                key={cat.idCategoria}
-                                onClick={() => setFiltroCategoria(cat.idCategoria)}
-                                className={`cat-btn flex-shrink-0 flex flex-col items-center gap-2 p-3 border transition-all ${filtroCategoria === cat.idCategoria
-                                        ? 'border-[#C9758A] bg-[#C9758A]/5'
-                                        : 'border-[#E8D8D2] hover:border-[#C9758A]'
-                                    }`}
-                            >
-                                <div className="w-16 h-16 bg-[#F2E8E4] overflow-hidden flex items-center justify-center">
-                                    {cat.imagen ? (
-                                        <img
-                                            src={`/img/${cat.imagen}`}
-                                            alt={cat.nombre}
-                                            className="w-full h-full object-cover transition-transform duration-300"
-                                            onError={(e) => { e.target.src = '/img/sin-imagen.webp'; }}
-                                        />
-                                    ) : (
-                                        <span className="text-2xl text-[#C4975A]">✦</span>
-                                    )}
-                                </div>
-                                <span className="text-xs font-medium tracking-wider text-[#2A1F1F] max-w-[72px] text-center leading-tight" style={sans}>
-                                    {cat.nombre}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
+            
             <div className="max-w-[1400px] mx-auto px-8 lg:px-16 py-12">
                 <button
                     onClick={() => setMenuCategoriasAbierto(!menuCategoriasAbierto)}
